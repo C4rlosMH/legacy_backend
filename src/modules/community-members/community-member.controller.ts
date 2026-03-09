@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService, 
-  updateMemberRoleService,
+  updateMemberRoleService, toggleHideProfileService, kickMemberService
 } from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
@@ -113,5 +113,37 @@ export const updateMemberRole = async (req: AuthRequest, res: Response): Promise
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al actualizar el rol' });
+  }
+};
+
+export const toggleHideProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Forzamos el tipado a string individualmente
+    const communityId = req.params.communityId as string;
+    const targetUserId = req.params.targetUserId as string;
+    const { hide } = req.body; 
+
+    if (typeof hide !== 'boolean') {
+      res.status(400).json({ message: 'El campo hide debe ser un booleano (true o false)' });
+      return;
+    }
+
+    const member = await toggleHideProfileService(communityId, targetUserId, hide);
+    res.status(200).json({ message: `Perfil ${hide ? 'ocultado' : 'visible'} con éxito`, member });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar la visibilidad del perfil' });
+  }
+};
+
+export const kickMember = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Forzamos el tipado a string individualmente
+    const communityId = req.params.communityId as string;
+    const targetUserId = req.params.targetUserId as string;
+    
+    const result = await kickMemberService(communityId, targetUserId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al expulsar al usuario' });
   }
 };

@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
-import { createPostService, getCommunityFeedService, getGlobalFeedService } from './post.service';
+import { createPostService, getCommunityFeedService, getGlobalFeedService,
+  moderatePostService,
+ } from './post.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
 export const createPost = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -65,5 +67,23 @@ export const getGlobalFeed = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al obtener el feed global' });
+  }
+};
+
+export const moderatePost = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    const postId = req.params.postId as string;
+    const { action } = req.body; // 'hide', 'unhide', 'pin', 'unpin', 'delete'
+
+    if (!['hide', 'unhide', 'pin', 'unpin', 'delete'].includes(action)) {
+      res.status(400).json({ message: 'Acción de moderación no válida' });
+      return;
+    }
+
+    const result = await moderatePostService(postId, communityId, action);
+    res.status(200).json({ message: `Acción '${action}' ejecutada con éxito`, data: result });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al moderar el post' });
   }
 };

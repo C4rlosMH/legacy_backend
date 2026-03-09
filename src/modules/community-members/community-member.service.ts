@@ -9,13 +9,11 @@ interface JoinCommunityDTO {
 }
 
 export const joinCommunityService = async (data: JoinCommunityDTO) => {
-  // 1. Verificar si la comunidad realmente existe
   const community = await CommunityModel.findById(data.communityId);
   if (!community) {
     throw new Error('La comunidad a la que intentas unirte no existe');
   }
 
-  // 2. Verificar si el usuario ya es miembro
   const existingMember = await CommunityMemberModel.findOne({
     userId: data.userId,
     communityId: data.communityId
@@ -25,12 +23,11 @@ export const joinCommunityService = async (data: JoinCommunityDTO) => {
     throw new Error('Ya eres miembro de esta comunidad');
   }
 
-  // 3. Crear el perfil del usuario en este universo
   const newMember = await CommunityMemberModel.create({
     userId: data.userId,
     communityId: data.communityId,
     nickname: data.nickname,
-    role: 'member', // Por defecto, todos entran como miembros base
+    role: 'member',
     roleplayData: {} 
   });
 
@@ -38,12 +35,9 @@ export const joinCommunityService = async (data: JoinCommunityDTO) => {
 };
 
 export const getUserCommunitiesService = async (userId: string) => {
-  // Buscamos todas las membresías de este usuario
   const memberships = await CommunityMemberModel.find({ userId })
-    // Poblamos el campo communityId para traer los datos reales de la comunidad
     .populate('communityId', 'name description avatar banner')
-    // Ordenamos para mostrar primero a las que se unió más recientemente
-    .sort({ joinedAt: -1 }); 
+    .sort({ createdAt: -1 }); 
 
   return memberships;
 };
@@ -51,13 +45,13 @@ export const getUserCommunitiesService = async (userId: string) => {
 interface UpdateCommunityProfileDTO {
   nickname?: string;
   avatar?: string;
-  role?: string; // Por si a futuro quieres manejar rangos o roles de roleplay
-  bio?: string; // Biografía específica para este universo
+  role?: string;
+  bio?: string; 
 }
 
 export const updateCommunityProfileService = async (userId: string, communityId: string, data: UpdateCommunityProfileDTO) => {
   const updatedMember = await CommunityMemberModel.findOneAndUpdate(
-    { userId, communityId }, // Buscamos el perfil exacto de este usuario en este universo
+    { userId, communityId },
     { $set: data },
     { new: true, runValidators: true }
   );
@@ -75,33 +69,51 @@ export const updateMemberRoleService = async (
   newRole: CommunityRole, 
   requesterRole: CommunityRole
 ) => {
-  // 1. Buscamos al usuario al que se le va a cambiar el rol
   const targetMember = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
   
   if (!targetMember) {
     throw new Error('El usuario no es miembro de esta comunidad');
   }
 
-  // 2. Regla intocable: Nadie puede modificar el rol del Agente Creador por esta vía
   if (targetMember.role === 'owner') {
     throw new Error('No puedes modificar el rol del agente de la comunidad');
   }
 
-  // 3. Reglas específicas para el Admin (Líder)
   if (requesterRole === 'admin') {
-    // Un admin no puede ascender a alguien a admin ni a owner
     if (newRole === 'admin' || newRole === 'owner') {
       throw new Error('Los líderes solo pueden nombrar o degradar moderadores');
     }
-    // Un admin no puede degradar a otro admin
     if (targetMember.role === 'admin') {
       throw new Error('Un líder no puede modificar el rol de otro líder');
     }
   }
 
-  // 4. Si pasó todas las validaciones de seguridad, aplicamos el nuevo rol
   targetMember.role = newRole;
   await targetMember.save();
 
   return targetMember;
+};
+
+// --- FUNCIONES DE MODERACIÓN DE USUARIOS ---
+
+export const toggleHideProfileService = async (communityId: string, targetUserId: string, hide: boolean) => {
+  const member = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
+  if (!member) throw new Error('El usuario no es miembro de la comunidad');
+  
+  if (member.role === 'owner') throw new Error('No puedes ocultar el perfil del creador');
+
+  member.isHidden = hide;
+  await member.save();
+  return member;
+};
+
+export const kickMemberService = async (communityId: string, targetUserId: string) => {
+  const member = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
+  if (!member) throw new Error('El usuario no es miembro de la comunidad');
+  
+  if (member.role === 'owner') throw new Error('No puedes expulsar al creador');
+  if (member.role === 'admin') throw new Error('Los líderes no pueden ser expulsados, deben ser degradados primero');
+
+  await CommunityMemberModel.findByIdAndDelete(member._id);
+  return { message: 'Usuario expulsado de la comunidad' };
 };

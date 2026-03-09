@@ -1,11 +1,12 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IUser extends Document {
-  name: string;      // Nombre a mostrar (ej. "Juan Pérez" o "Dark Knight")
-  username: string;  // Identificador único (ej. "@juanperez")
+  name: string;      
+  username: string;  
   email: string;
   passwordHash: string;
   avatar?: string;
+  banner?: string; // Agregado para que coincida con la actualización del perfil
   bio?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -40,6 +41,7 @@ const UserSchema: Schema = new Schema(
       required: [true, 'La contraseña es obligatoria'],
     },
     avatar: { type: String, default: '' },
+    banner: { type: String, default: '' },
     bio: { type: String, maxlength: [300, 'La biografía no puede exceder los 300 caracteres'], default: '' },
   },
   { timestamps: true }

@@ -60,3 +60,35 @@ export const getGlobalFeedService = async () => {
     
   return posts;
 };
+
+export const moderatePostService = async (
+  postId: string, 
+  communityId: string, 
+  action: 'hide' | 'unhide' | 'pin' | 'unpin' | 'delete'
+) => {
+  // Verificamos que el post exista y pertenezca a este universo
+  const post = await PostModel.findOne({ _id: postId, communityId });
+  if (!post) throw new Error('El post no existe en esta comunidad');
+
+  switch (action) {
+    case 'hide':
+      post.isHidden = true;
+      break;
+    case 'unhide':
+      post.isHidden = false;
+      break;
+    case 'pin':
+      post.isPinned = true;
+      break;
+    case 'unpin':
+      post.isPinned = false;
+      break;
+    case 'delete':
+      await PostModel.findByIdAndDelete(postId);
+      return { message: 'Post eliminado permanentemente' };
+  }
+
+  await post.save();
+  return post;
+};
+

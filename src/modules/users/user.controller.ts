@@ -1,8 +1,11 @@
 import { Request, Response } from 'express';
-import { createUserService, loginUserService, getUserProfileService,
- updateGlobalProfileService,
- } from './user.service';
-import { config } from '../../config'; // Importamos la configuración central
+import { 
+  createUserService, 
+  loginUserService, 
+  getUserProfileService,
+  updateGlobalProfileService
+} from './user.service';
+import { config } from '../../config'; 
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
@@ -43,10 +46,9 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({
       message: 'Inicio de sesión exitoso',
-      ...authData // Desestructuramos para enviar { message, user, token }
+      ...authData 
     });
   } catch (error: any) {
-    // Retornamos 401 Unauthorized para errores de autenticación
     res.status(401).json({ message: error.message || 'Error al iniciar sesión' });
   }
 };

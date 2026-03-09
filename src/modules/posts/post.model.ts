@@ -6,13 +6,18 @@ export interface IPost extends Document {
   
   // Referencias para la comunidad
   communityId?: mongoose.Types.ObjectId; 
-  authorMemberId?: mongoose.Types.ObjectId; // NUEVO: El perfil que usa en esta comunidad
+  authorMemberId?: mongoose.Types.ObjectId; // El perfil que usa en esta comunidad
   
   title?: string;
   content: string;
   mediaUrls: string[];
   likesCount: number;
   commentsCount: number;
+  
+  // Banderas de Moderación
+  isHidden: boolean;
+  isPinned: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,15 +28,19 @@ const PostSchema: Schema = new Schema(
     authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     
     communityId: { type: Schema.Types.ObjectId, ref: 'Community' },
-    authorMemberId: { type: Schema.Types.ObjectId, ref: 'CommunityMember' }, // Añadido
+    authorMemberId: { type: Schema.Types.ObjectId, ref: 'CommunityMember' },
     
     title: { type: String, trim: true, maxlength: 100 },
     content: { type: String, required: true },
     mediaUrls: { type: [String], default: [] },
     likesCount: { type: Number, default: 0 },
-    commentsCount: { type: Number, default: 0 }
+    commentsCount: { type: Number, default: 0 },
+
+    // Configuración de las banderas de moderación
+    isHidden: { type: Boolean, default: false },
+    isPinned: { type: Boolean, default: false }
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 PostSchema.pre('save', function (this: IPost) {

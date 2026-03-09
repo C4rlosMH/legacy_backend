@@ -1,6 +1,8 @@
 import { Router } from 'express';
-import { createPost, getCommunityFeed, getGlobalFeed } from './post.controller';
+import { createPost, getCommunityFeed, getGlobalFeed, moderatePost } from './post.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
+import { requireCommunityRole } from '../../middlewares/community-role.middleware';
+
 
 const router = Router();
 
@@ -12,6 +14,13 @@ router.get('/global', getGlobalFeed);
 
 // Ruta: GET /api/v1/posts/community/:communityId
 router.get('/community/:communityId', getCommunityFeed);
+
+router.put(
+  '/:communityId/:postId/moderate',
+  verifyToken,
+  requireCommunityRole(['owner', 'admin', 'moderator']), 
+  moderatePost
+);
 
 
 export default router;
