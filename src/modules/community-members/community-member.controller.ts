@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
-import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService } from './community-member.service';
+import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService, 
+  updateMemberRoleService,
+} from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
+import { CommunityRole } from '../../middlewares/community-role.middleware';
 
 export const joinCommunity = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -80,5 +83,35 @@ export const updateCommunityProfile = async (req: AuthRequest, res: Response): P
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al actualizar el perfil de la comunidad' });
+  }
+};
+
+export const updateMemberRole = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    const targetUserId = req.params.targetUserId as string;
+    const { newRole } = req.body; 
+
+    // Extraemos el rol de la persona que está ejecutando la acción (inyectado por el middleware)
+    const requesterRole = req.communityMembership.role as CommunityRole;
+
+    if (!newRole || !['admin', 'moderator', 'member'].includes(newRole)) {
+      res.status(400).json({ message: 'Rol inválido. Debe ser admin, moderator o member' });
+      return;
+    }
+
+    const updatedMember = await updateMemberRoleService(
+      communityId,
+      targetUserId,
+      newRole as CommunityRole,
+      requesterRole
+    );
+
+    res.status(200).json({
+      message: `Rol actualizado exitosamente a ${newRole}`,
+      member: updatedMember
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar el rol' });
   }
 };

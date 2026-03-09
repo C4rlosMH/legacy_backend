@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { joinCommunity, getUserCommunities, updateCommunityProfile} from './community-member.controller';
+import { joinCommunity, getUserCommunities, updateCommunityProfile, updateMemberRole,
+
+} from './community-member.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
@@ -18,6 +20,14 @@ router.put(
   verifyToken, 
   requireCommunityRole(['owner', 'admin', 'moderator', 'member']), 
   updateCommunityProfile
+);
+
+// PUT /api/v1/community-members/:communityId/roles/:targetUserId
+router.put(
+  '/:communityId/roles/:targetUserId',
+  verifyToken,
+  requireCommunityRole(['owner', 'admin']), // Solo Agentes y Líderes entran aquí
+  updateMemberRole
 );
 
 export default router;
