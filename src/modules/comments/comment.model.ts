@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IComment extends Document {
-  targetType: 'post' | 'user_wall'; // Define si es respuesta a un post o un mensaje de muro
+  targetType: 'post' | 'user_wall' | 'wiki'; // Define si es respuesta a un post o un mensaje de muro
   targetId: mongoose.Types.ObjectId; // El ID del Post o el ID del User receptor
   
   authorId: mongoose.Types.ObjectId; // El usuario global que lo escribió
@@ -20,7 +20,7 @@ const CommentSchema: Schema = new Schema(
   {
     targetType: {
       type: String,
-      enum: ['post', 'user_wall'],
+      enum: ['post', 'user_wall', 'wiki'],
       required: true
     },
     targetId: { 

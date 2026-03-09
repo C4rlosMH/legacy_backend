@@ -1,6 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// Interfaz para los atributos dinámicos (Ej: { name: "Raza", value: "Elfo" })
 export interface IWikiAttribute {
   name: string;
   value: string;
@@ -10,16 +9,17 @@ export interface IWiki extends Document {
   title: string;
   content: string;
   coverImage?: string;
-  backgroundImage?: string; // Para personalizar la lectura de la ficha
+  backgroundImage?: string; 
   
-  isCharacterSheet: boolean; // El interruptor mágico
-  attributes: IWikiAttribute[]; // La tabla de estadísticas/datos
+  isCharacterSheet: boolean; 
+  attributes: IWikiAttribute[]; 
   
-  catalogStatus: 'none' | 'pending' | 'approved' | 'rejected'; // Estado de moderación
+  catalogStatus: 'none' | 'pending' | 'approved' | 'rejected'; 
   
-  authorId: mongoose.Types.ObjectId; // Referencia global por seguridad
-  communityId: mongoose.Types.ObjectId; // El universo al que pertenece
-  authorMemberId: mongoose.Types.ObjectId; // El perfil local del creador
+  authorId: mongoose.Types.ObjectId; 
+  communityId: mongoose.Types.ObjectId; 
+  authorMemberId: mongoose.Types.ObjectId; 
+  categoryId?: mongoose.Types.ObjectId; // <-- NUEVO: Vinculación con la carpeta
   
   likesCount: number;
   commentsCount: number;
@@ -36,7 +36,7 @@ const WikiAttributeSchema = new Schema<IWikiAttribute>(
     name: { type: String, required: true, trim: true },
     value: { type: String, required: true, trim: true }
   },
-  { _id: false } // No necesitamos un ID único para cada pequeño atributo
+  { _id: false } 
 );
 
 const WikiSchema: Schema = new Schema(
@@ -58,6 +58,7 @@ const WikiSchema: Schema = new Schema(
     authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     communityId: { type: Schema.Types.ObjectId, ref: 'Community', required: true },
     authorMemberId: { type: Schema.Types.ObjectId, ref: 'CommunityMember', required: true },
+    categoryId: { type: Schema.Types.ObjectId, ref: 'WikiCategory', default: null }, // <-- NUEVO
     
     likesCount: { type: Number, default: 0 },
     commentsCount: { type: Number, default: 0 },
@@ -68,8 +69,8 @@ const WikiSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-// Índices para optimizar las búsquedas dentro de una comunidad
-WikiSchema.index({ communityId: 1, catalogStatus: 1 }); // Útil para listar el catálogo oficial
-WikiSchema.index({ communityId: 1, isCharacterSheet: 1 }); // Útil para filtrar solo personajes
+WikiSchema.index({ communityId: 1, catalogStatus: 1 }); 
+WikiSchema.index({ communityId: 1, isCharacterSheet: 1 }); 
+WikiSchema.index({ communityId: 1, categoryId: 1 }); // <-- Índice extra para búsquedas por carpeta
 
 export const WikiModel = mongoose.model<IWiki>('Wiki', WikiSchema);

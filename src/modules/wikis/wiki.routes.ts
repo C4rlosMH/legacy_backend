@@ -1,9 +1,52 @@
 import { Router } from 'express';
-import { createWiki, submitWiki, moderateWiki, updateWiki, getWiki, deleteWiki } from './wiki.controller';
+import { createWiki, submitWiki, moderateWiki, updateWiki, getWiki, deleteWiki,
+    getCatalogWikis,
+ } from './wiki.controller';
+import { createCategory, getCategories, updateCategory, deleteCategory } from './wiki-category.controller'; // <-- NUEVO
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
 const router = Router();
+
+// ==========================================
+// RUTAS DE CATEGORÍAS (CARPETAS DEL CATÁLOGO)
+// ==========================================
+
+// Ver carpetas (público para miembros de la comunidad)
+router.get(
+  '/:communityId/categories', 
+  verifyToken, 
+  requireCommunityRole(['owner', 'admin', 'moderator', 'member']), 
+  getCategories
+);
+
+// Crear carpeta (Solo Staff)
+router.post(
+  '/:communityId/categories', 
+  verifyToken, 
+  requireCommunityRole(['owner', 'admin', 'moderator']), 
+  createCategory
+);
+
+// Actualizar carpeta (Solo Staff)
+router.put(
+  '/:communityId/categories/:categoryId', 
+  verifyToken, 
+  requireCommunityRole(['owner', 'admin', 'moderator']), 
+  updateCategory
+);
+
+// Eliminar carpeta (Solo Staff)
+router.delete(
+  '/:communityId/categories/:categoryId', 
+  verifyToken, 
+  requireCommunityRole(['owner', 'admin', 'moderator']), 
+  deleteCategory
+);
+
+// ==========================================
+// RUTAS DE WIKIS
+// ==========================================
 
 // Ruta: POST /api/v1/wikis/:communityId
 router.post(
@@ -13,8 +56,16 @@ router.post(
   createWiki
 );
 
+// Ruta: GET /api/v1/wikis/:communityId/catalog
+// Explorador del catálogo oficial (IMPORTANTE: Debe ir antes del GET por ID)
+router.get(
+  '/:communityId/catalog',
+  verifyToken,
+  requireCommunityRole(['owner', 'admin', 'moderator', 'member']),
+  getCatalogWikis
+);
+
 // Ruta: GET /api/v1/wikis/:communityId/:wikiId
-// Lectura pública para miembros de la comunidad (maneja el anonimato del autor)
 router.get(
   '/:communityId/:wikiId',
   verifyToken,
@@ -23,7 +74,6 @@ router.get(
 );
 
 // Ruta: PUT /api/v1/wikis/:communityId/:wikiId
-// Permite al usuario editar su original, o al staff editar la dorada
 router.put(
   '/:communityId/:wikiId',
   verifyToken,
@@ -48,12 +98,11 @@ router.put(
 );
 
 // Ruta: DELETE /api/v1/wikis/:communityId/:wikiId
-// El servicio discrimina si se borra la original (usuario) o la dorada (staff)
 router.delete(
   '/:communityId/:wikiId',
   verifyToken,
   requireCommunityRole(['owner', 'admin', 'moderator', 'member']),
-  deleteWiki // <- Asegúrate de importarlo
+  deleteWiki
 );
 
 export default router;

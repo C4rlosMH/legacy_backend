@@ -8,6 +8,7 @@ export interface CreateWikiDTO {
   backgroundImage?: string;
   isCharacterSheet?: boolean;
   attributes?: IWikiAttribute[];
+  categoryId?: string; // <-- NUEVO
 }
 
 // 1. Crear una nueva Wiki o Ficha
@@ -76,7 +77,6 @@ export const moderateWikiCatalogService = async (
     let goldenWiki = await WikiModel.findOne({ originalWikiId: originalWiki._id, communityId });
 
     if (goldenWiki) {
-      // Actualizamos la copia dorada existente (Aplicando fallback a string vacío)
       goldenWiki.title = originalWiki.title;
       goldenWiki.content = originalWiki.content;
       goldenWiki.coverImage = originalWiki.coverImage || '';
@@ -86,7 +86,6 @@ export const moderateWikiCatalogService = async (
       
       return goldenWiki;
     } else {
-      // Creamos la copia dorada por primera vez (Aplicando fallback a string vacío)
       goldenWiki = await WikiModel.create({
         title: originalWiki.title,
         content: originalWiki.content,
@@ -102,6 +101,7 @@ export const moderateWikiCatalogService = async (
         authorId: originalWiki.authorId,
         communityId: originalWiki.communityId,
         authorMemberId: originalWiki.authorMemberId
+        // Nota: No heredamos categoryId de la original, el staff se lo asignará luego
       });
 
       return goldenWiki;
@@ -144,6 +144,7 @@ export const updateWikiService = async (
     coverImage: updateData.coverImage ?? wiki.coverImage,
     backgroundImage: updateData.backgroundImage ?? wiki.backgroundImage,
     attributes: updateData.attributes ?? wiki.attributes,
+    categoryId: updateData.categoryId !== undefined ? updateData.categoryId : wiki.categoryId, // <-- NUEVO
   };
 
   Object.assign(wiki, safeUpdates);
@@ -152,21 +153,20 @@ export const updateWikiService = async (
   return wiki;
 };
 
-// 5. Obtener una Wiki (con lógica de anonimato)
+// 5. Obtener una Wiki
 export const getWikiService = async (communityId: string, wikiId: string) => {
   const wiki = await WikiModel.findOne({ _id: wikiId, communityId })
-    .populate('authorMemberId', 'status displayName avatar') // Ajusta los campos según tu modelo de miembro
-    .lean(); // .lean() para poder modificar el objeto antes de retornarlo
+    .populate('authorMemberId', 'status displayName avatar') 
+    .populate('categoryId', 'name') // <-- NUEVO: Para que devuelva el nombre de la carpeta
+    .lean(); 
 
   if (!wiki) {
     throw new Error('Wiki no encontrada');
   }
 
-  // Verificamos el estado del autor. Si fue expulsado (banned, kicked, left), ocultamos sus datos.
   const authorData: any = wiki.authorMemberId;
   if (!authorData || ['banned', 'kicked', 'left'].includes(authorData.status)) {
     wiki.authorMemberId = null as any; 
-    // O puedes asignar un objeto por defecto: { displayName: 'Usuario Desconocido', avatar: 'default.png' }
   }
 
   return wiki;
@@ -185,15 +185,12 @@ export const deleteWikiService = async (
     throw new Error('La Wiki no existe');
   }
 
-  // CASO A: El staff elimina una copia curada (Dorada)
   if (wiki.isOfficial) {
     const isStaff = ['owner', 'admin', 'moderator'].includes(userRole);
     if (!isStaff) {
       throw new Error('Solo el staff puede eliminar una Wiki del catálogo oficial');
     }
 
-    // Si la wiki dorada tenía una original vinculada, le reiniciamos el estado 
-    // para que el usuario sepa que ya no está en el catálogo y pueda reenviarla
     if (wiki.originalWikiId) {
       await WikiModel.updateOne(
         { _id: wiki.originalWikiId },
@@ -203,17 +200,74 @@ export const deleteWikiService = async (
 
     await wiki.deleteOne();
     return { message: 'Wiki oficial eliminada del catálogo exitosamente' };
-  } 
-  
-  // CASO B: El usuario elimina su copia original
-  else {
+  } else {
     if (wiki.authorId.toString() !== userId) {
       throw new Error('No tienes permiso para eliminar esta Wiki personal');
     }
 
-    // Eliminamos la original. 
-    // Nota: La copia dorada (si existe) no se ve afectada, porque es un documento independiente.
     await wiki.deleteOne();
     return { message: 'Wiki personal eliminada. (Si estaba aprobada, la copia oficial en el catálogo se mantiene)' };
   }
+};
+
+// 7. Explorador del Catálogo (Listar Wikis Oficiales con filtros)
+export const getCatalogWikisService = async (
+  communityId: string,
+  filters: { categoryId?: string; isCharacterSheet?: boolean; search?: string },
+  page: number = 1,
+  limit: number = 20
+) => {
+  // Construimos la consulta base: Solo contenido oficial aprobado de esta comunidad
+  const query: any = {
+    communityId,
+    isOfficial: true,
+    catalogStatus: 'approved'
+  };
+
+  // Aplicamos filtros opcionales si vienen en la petición
+  if (filters.categoryId) {
+    query.categoryId = filters.categoryId;
+  }
+
+  if (filters.isCharacterSheet !== undefined) {
+    query.isCharacterSheet = filters.isCharacterSheet;
+  }
+
+  if (filters.search) {
+    // Búsqueda insensible a mayúsculas/minúsculas en el título
+    query.title = new RegExp(filters.search, 'i');
+  }
+
+  const skip = (page - 1) * limit;
+
+  // Ejecutamos la búsqueda con paginación y población de datos
+  const wikis = await WikiModel.find(query)
+    .populate('authorMemberId', 'status displayName avatar')
+    .populate('categoryId', 'name')
+    .sort({ updatedAt: -1 }) // Los más recientemente actualizados primero
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  // Procesamos el anonimato para autores expulsados
+  const processedWikis = wikis.map(wiki => {
+    const authorData: any = wiki.authorMemberId;
+    if (!authorData || ['banned', 'kicked', 'left'].includes(authorData.status)) {
+      wiki.authorMemberId = null as any;
+    }
+    return wiki;
+  });
+
+  // Contamos el total para que el frontend pueda armar su paginación
+  const total = await WikiModel.countDocuments(query);
+
+  return {
+    wikis: processedWikis,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
 };

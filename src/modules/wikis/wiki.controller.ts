@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { 
   createWikiService, 
-  submitWikiToCatalogService, 
+  submitWikiToCatalogService, getCatalogWikisService,
   moderateWikiCatalogService,
   updateWikiService,
   getWikiService, deleteWikiService
@@ -135,5 +135,33 @@ export const deleteWiki = async (req: AuthRequest, res: Response): Promise<void>
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al eliminar la Wiki' });
+  }
+};
+
+// 7. Explorar el Catálogo Oficial
+export const getCatalogWikis = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    
+    // Extraer parámetros de la URL (Query Params)
+    const categoryId = req.query.categoryId as string | undefined;
+    const type = req.query.type as string | undefined; // Puede ser 'character' o 'general'
+    const search = req.query.search as string | undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    // Convertir el string de tipo a booleano para el servicio
+    const filters: any = { categoryId, search };
+    if (type === 'character') filters.isCharacterSheet = true;
+    if (type === 'general') filters.isCharacterSheet = false;
+
+    const result = await getCatalogWikisService(communityId, filters, page, limit);
+
+    res.status(200).json({
+      message: 'Catálogo obtenido exitosamente',
+      ...result
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al obtener el catálogo' });
   }
 };

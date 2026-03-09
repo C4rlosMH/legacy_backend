@@ -11,6 +11,7 @@ import communityMemberRoutes from './modules/community-members/community-member.
 import chatRoutes from './modules/chats/chat.routes';
 import wikiRoutes from './modules/wikis/wiki.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
+import likeRoutes from './modules/likes/like.routes';
 
 const app: Application = express();
 
@@ -33,6 +34,7 @@ app.use(`${apiPrefix}/community-members`, communityMemberRoutes);
 app.use(`${apiPrefix}/chats`, chatRoutes);
 app.use(`${apiPrefix}/notifications`, notificationRoutes);
 app.use(`${apiPrefix}/wikis`, wikiRoutes);
+app.use(`${apiPrefix}/likes`, likeRoutes);
 
 
 export default app;
