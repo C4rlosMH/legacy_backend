@@ -1,20 +1,24 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
+// Tipos de publicaciones rápidas en inglés
+export type PostType = 'thread' | 'blog' | 'announcement' | 'question' | 'link';
+
 export interface IPost extends Document {
   context: 'community' | 'global_thread';
-  authorId: mongoose.Types.ObjectId; // Conservamos el autor global por seguridad interna
+  postType: PostType; 
   
-  // Referencias para la comunidad
+  authorId: mongoose.Types.ObjectId; 
   communityId?: mongoose.Types.ObjectId; 
-  authorMemberId?: mongoose.Types.ObjectId; // El perfil que usa en esta comunidad
+  authorMemberId?: mongoose.Types.ObjectId; 
   
   title?: string;
   content: string;
+  linkUrl?: string; 
   mediaUrls: string[];
+  
   likesCount: number;
   commentsCount: number;
   
-  // Banderas de Moderación
   isHidden: boolean;
   isPinned: boolean;
 
@@ -25,18 +29,24 @@ export interface IPost extends Document {
 const PostSchema: Schema = new Schema(
   {
     context: { type: String, enum: ['community', 'global_thread'], required: true },
-    authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    postType: { 
+      type: String, 
+      enum: ['thread', 'blog', 'announcement', 'question', 'link'], 
+      default: 'thread' 
+    },
     
+    authorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     communityId: { type: Schema.Types.ObjectId, ref: 'Community' },
-    authorMemberId: { type: Schema.Types.ObjectId, ref: 'CommunityMember' },
+    authorMemberId: { type: Schema.Types.ObjectId, ref: 'CommunityMember' }, 
     
     title: { type: String, trim: true, maxlength: 100 },
     content: { type: String, required: true },
+    linkUrl: { type: String, trim: true }, 
     mediaUrls: { type: [String], default: [] },
+    
     likesCount: { type: Number, default: 0 },
     commentsCount: { type: Number, default: 0 },
 
-    // Configuración de las banderas de moderación
     isHidden: { type: Boolean, default: false },
     isPinned: { type: Boolean, default: false }
   },
@@ -48,6 +58,10 @@ PostSchema.pre('save', function (this: IPost) {
     if (!this.communityId || !this.authorMemberId) {
       throw new Error('Un post de comunidad requiere el communityId y el authorMemberId');
     }
+  }
+  
+  if (this.postType === 'link' && !this.linkUrl) {
+    throw new Error('Las publicaciones de tipo enlace deben incluir una URL');
   }
 });
 
