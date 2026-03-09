@@ -33,3 +33,47 @@ export const createCommunityService = async (data: CreateCommunityDTO) => {
 
   return newCommunity;
 };
+
+export const getCommunityDetailsService = async (communityId: string) => {
+  const community = await CommunityModel.findById(communityId);
+  if (!community) throw new Error('La comunidad no existe');
+  return community;
+};
+
+export const searchCommunitiesService = async (searchQuery: string) => {
+  // Creamos una expresión regular que ignore mayúsculas y minúsculas ('i')
+  const regex = new RegExp(searchQuery, 'i');
+
+  // Buscamos comunidades donde el nombre o la descripción coincidan con el texto
+  const communities = await CommunityModel.find({
+    $or: [
+      { name: regex },
+      { description: regex }
+    ]
+  })
+  .select('name description avatar banner createdAt') // Traemos solo lo necesario para la tarjeta de búsqueda
+  .limit(20); // Limitamos a 20 resultados para no saturar la red
+
+  return communities;
+};
+
+interface UpdateCommunityDTO {
+  name?: string;
+  description?: string;
+  avatar?: string;
+  banner?: string;
+}
+
+export const updateCommunitySettingsService = async (communityId: string, data: UpdateCommunityDTO) => {
+  const updatedCommunity = await CommunityModel.findByIdAndUpdate(
+    communityId,
+    { $set: data }, // Actualizamos solo los campos que se envíen
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedCommunity) {
+    throw new Error('La comunidad no existe');
+  }
+
+  return updatedCommunity;
+};

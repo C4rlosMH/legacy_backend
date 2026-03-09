@@ -46,3 +46,24 @@ export const getUserCommunitiesService = async (userId: string) => {
 
   return memberships;
 };
+
+interface UpdateCommunityProfileDTO {
+  nickname?: string;
+  avatar?: string;
+  role?: string; // Por si a futuro quieres manejar rangos o roles de roleplay
+  bio?: string; // Biografía específica para este universo
+}
+
+export const updateCommunityProfileService = async (userId: string, communityId: string, data: UpdateCommunityProfileDTO) => {
+  const updatedMember = await CommunityMemberModel.findOneAndUpdate(
+    { userId, communityId }, // Buscamos el perfil exacto de este usuario en este universo
+    { $set: data },
+    { new: true, runValidators: true }
+  );
+
+  if (!updatedMember) {
+    throw new Error('No eres miembro de esta comunidad o el perfil no existe');
+  }
+
+  return updatedMember;
+};

@@ -66,3 +66,33 @@ export const loginUserService = async (data: LoginUserDTO) => {
     token
   };
 };
+
+export const getUserProfileService = async (username: string) => {
+  // Buscamos por username (ideal para URLs limpias como legacy.app/user/juanperez)
+  // Usamos .select() para evitar enviar datos sensibles como el passwordHash o el email al público
+  const user = await UserModel.findOne({ username }).select('-passwordHash -email');
+  if (!user) throw new Error('Usuario no encontrado');
+  return user;
+};
+
+interface UpdateGlobalProfileDTO {
+  name?: string;
+  avatar?: string;
+  banner?: string;
+  bio?: string; // Biografía global
+}
+
+export const updateGlobalProfileService = async (userId: string, data: UpdateGlobalProfileDTO) => {
+  // Usamos findByIdAndUpdate con { new: true } para que nos devuelva el documento ya actualizado
+  const updatedUser = await UserModel.findByIdAndUpdate(
+    userId,
+    { $set: data }, // $set solo actualiza los campos que enviemos, ignorando los demás
+    { new: true, runValidators: true }
+  ).select('-passwordHash'); // Excluimos la contraseña por seguridad
+
+  if (!updatedUser) {
+    throw new Error('Usuario no encontrado');
+  }
+
+  return updatedUser;
+};

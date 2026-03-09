@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { getUserCommunitiesService, joinCommunityService } from './community-member.service';
+import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService } from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
 export const joinCommunity = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -53,5 +53,32 @@ export const getUserCommunities = async (req: AuthRequest, res: Response): Promi
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al obtener las comunidades' });
+  }
+};
+
+export const updateCommunityProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const communityId = req.params.communityId as string;
+    const { nickname, avatar, role, bio } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const updatedProfile = await updateCommunityProfileService(userId, communityId, {
+      nickname,
+      avatar,
+      role,
+      bio
+    });
+
+    res.status(200).json({
+      message: 'Perfil de comunidad actualizado exitosamente',
+      profile: updatedProfile
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar el perfil de la comunidad' });
   }
 };

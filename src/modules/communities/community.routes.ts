@@ -1,14 +1,26 @@
 import { Router } from 'express';
-import { createCommunity } from './community.controller';
+import { createCommunity, getCommunityDetails, searchCommunities, updateCommunitySettings } from './community.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
+import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
 const router = Router();
 
 // Ruta: POST /api/v1/communities
 router.post('/', verifyToken, createCommunity);
 
+// Ruta: GET /api/v1/communities/search?q=texto (Pública - Buscador Global)
+router.get('/search', searchCommunities);
+
+// Solo Owner y Admin pueden pasar
+router.put(
+  '/:communityId/settings', 
+  verifyToken, 
+  requireCommunityRole(['owner', 'admin']), 
+  updateCommunitySettings
+);
+
 // Aquí a futuro agregaremos rutas como:
-// router.get('/:id', getCommunityDetails);
+router.get('/:id', getCommunityDetails);
 // router.put('/:id', updateCommunity);
 
 export default router;

@@ -50,3 +50,13 @@ export const getCommunityFeedService = async (communityId: string) => {
     
   return posts;
 };
+
+export const getGlobalFeedService = async () => {
+  // Buscamos solo los posts que tengan el contexto de hilo global
+  const posts = await PostModel.find({ context: 'global_thread' })
+    .sort({ createdAt: -1 }) // Del más nuevo al más viejo
+    .limit(30) // Traemos 30 para tener un buen scroll inicial
+    .populate('authorId', 'name username avatar'); // Poblamos la identidad global
+    
+  return posts;
+};

@@ -7,6 +7,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
   };
+  communityMembership?: any; // ESTA ES LA LÍNEA NUEVA
 }
 
 // 2. Creamos el middleware

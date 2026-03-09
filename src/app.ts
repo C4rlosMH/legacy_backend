@@ -8,6 +8,8 @@ import communityRoutes from './modules/communities/community.routes';
 import postRoutes from './modules/posts/post.routes';
 import commentRoutes from './modules/comments/comment.routes';
 import communityMemberRoutes from './modules/community-members/community-member.routes';
+import chatRoutes from './modules/chats/chat.routes';
+import notificationRoutes from './modules/notifications/notification.routes';
 
 const app: Application = express();
 
@@ -27,6 +29,8 @@ app.use(`${apiPrefix}/communities`, communityRoutes);
 app.use(`${apiPrefix}/posts`, postRoutes);
 app.use(`${apiPrefix}/comments`, commentRoutes);
 app.use(`${apiPrefix}/community-members`, communityMemberRoutes);
+app.use(`${apiPrefix}/chats`, chatRoutes);
+app.use(`${apiPrefix}/notifications`, notificationRoutes);
 
 
 export default app;

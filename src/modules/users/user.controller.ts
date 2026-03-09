@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
-import { createUserService, loginUserService } from './user.service';
+import { createUserService, loginUserService, getUserProfileService,
+ updateGlobalProfileService,
+ } from './user.service';
 import { config } from '../../config'; // Importamos la configuración central
+import { AuthRequest } from '../../middlewares/auth.middleware';
 
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -45,5 +48,36 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
   } catch (error: any) {
     // Retornamos 401 Unauthorized para errores de autenticación
     res.status(401).json({ message: error.message || 'Error al iniciar sesión' });
+  }
+};
+
+export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const username = req.params.username as string;
+    const profile = await getUserProfileService(username);
+    res.status(200).json({ profile });
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const updateGlobalProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const { name, avatar, banner, bio } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const updatedProfile = await updateGlobalProfileService(userId, { name, avatar, banner, bio });
+    
+    res.status(200).json({
+      message: 'Perfil global actualizado exitosamente',
+      profile: updatedProfile
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar el perfil global' });
   }
 };

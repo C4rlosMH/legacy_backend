@@ -1,5 +1,7 @@
-import { Response } from 'express';
-import { createCommunityService } from './community.service';
+import { Request, Response } from 'express';
+import { createCommunityService, getCommunityDetailsService, searchCommunitiesService,
+  updateCommunitySettingsService,
+ } from './community.service';
 import { config } from '../../config';
 import { AuthRequest } from '../../middlewares/auth.middleware'; // Importamos la interfaz extendida
 
@@ -35,5 +37,58 @@ export const createCommunity = async (req: AuthRequest, res: Response): Promise<
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al crear la comunidad' });
+  }
+};
+
+export const getCommunityDetails = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.id as string;
+    const community = await getCommunityDetailsService(communityId);
+    res.status(200).json({ community });
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
+  }
+};
+
+export const searchCommunities = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Extraemos el término de búsqueda de la URL (ej: /api/v1/communities/search?q=Marvel)
+    const query = req.query.q as string;
+
+    if (!query) {
+      res.status(400).json({ message: 'Debes proporcionar un término de búsqueda' });
+      return;
+    }
+
+    const results = await searchCommunitiesService(query);
+
+    res.status(200).json({
+      message: 'Búsqueda completada',
+      results
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al realizar la búsqueda' });
+  }
+};
+
+export const updateCommunitySettings = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // El middleware de roles busca "communityId", así que lo extraeremos así
+    const communityId = req.params.communityId as string;
+    const { name, description, avatar, banner } = req.body;
+
+    const updatedCommunity = await updateCommunitySettingsService(communityId, {
+      name,
+      description,
+      avatar,
+      banner
+    });
+
+    res.status(200).json({
+      message: 'Configuración de la comunidad actualizada exitosamente',
+      community: updatedCommunity
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar la comunidad' });
   }
 };

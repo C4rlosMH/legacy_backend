@@ -1,6 +1,7 @@
 import { Router } from 'express';
-import { joinCommunity, getUserCommunities} from './community-member.controller';
+import { joinCommunity, getUserCommunities, updateCommunityProfile} from './community-member.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
+import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
 const router = Router();
 
@@ -10,9 +11,14 @@ router.post('/:communityId/join', verifyToken, joinCommunity);
 // Ruta: GET /api/v1/community-members/me/communities
 router.get('/my', verifyToken, getUserCommunities);
 
-// Aquí a futuro agregaremos rutas como:
-// router.put('/:communityId/role', changeMemberRole);
-// router.delete('/:communityId/leave', leaveCommunity);
+// Actualizar mi perfil (personaje/apodo) dentro de una comunidad específica
+// PUT /api/v1/community-members/:communityId/profile
+router.put(
+  '/:communityId/profile', 
+  verifyToken, 
+  requireCommunityRole(['owner', 'admin', 'moderator', 'member']), 
+  updateCommunityProfile
+);
 
 export default router;
 
