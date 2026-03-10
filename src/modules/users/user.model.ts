@@ -6,8 +6,19 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   avatar?: string;
-  banner?: string; // Agregado para que coincida con la actualización del perfil
+  banner?: string; 
   bio?: string;
+  
+  // ==========================================
+  // NUEVOS CAMPOS: Economía, Membresía y Age Gate
+  // ==========================================
+  legacyCoins: number; // No es opcional porque siempre tendrá un default de 100
+  premiumStatus: 'none' | 'active';
+  premiumType: 'fiat' | 'coins' | null;
+  premiumExpiresAt?: Date;
+  lastDailyClaim?: Date;
+  birthDate?: Date; // Opcional por ahora para no romper el registro existente
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,6 +54,28 @@ const UserSchema: Schema = new Schema(
     avatar: { type: String, default: '' },
     banner: { type: String, default: '' },
     bio: { type: String, maxlength: [300, 'La biografía no puede exceder los 300 caracteres'], default: '' },
+    
+    // ==========================================
+    // CAMPOS DE ECONOMÍA Y LEGACY+
+    // ==========================================
+    legacyCoins: { 
+      type: Number, 
+      default: 100, // Bono de bienvenida del protocolo Génesis
+      min: 0 
+    },
+    premiumStatus: { 
+      type: String, 
+      enum: ['none', 'active'], 
+      default: 'none' 
+    },
+    premiumType: { 
+      type: String, 
+      enum: ['fiat', 'coins', null], 
+      default: null 
+    },
+    premiumExpiresAt: { type: Date },
+    lastDailyClaim: { type: Date },
+    birthDate: { type: Date } 
   },
   { timestamps: true }
 );

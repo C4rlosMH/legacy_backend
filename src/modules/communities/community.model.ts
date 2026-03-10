@@ -8,6 +8,12 @@ export interface ICommunity extends Document {
   // NUEVOS CAMPOS DE PRIVACIDAD Y LISTADO
   visibility: 'public' | 'unlisted' | 'private';
   listingStatus: 'none' | 'pending' | 'approved' | 'rejected';
+
+  // NUEVOS CAMPOS: Tesorería y Personalización Visual
+  treasuryBalance: number;
+  themeColor: string;
+  isBlogsEnabled: boolean;
+  isWikisEnabled: boolean;
   
   createdAt: Date;
   updatedAt: Date;
@@ -42,6 +48,25 @@ const CommunitySchema: Schema = new Schema(
       type: String,
       enum: ['none', 'pending', 'approved', 'rejected'],
       default: 'none'
+    },
+    treasuryBalance: { 
+      type: Number, 
+      default: 0, 
+      min: 0 
+    },
+    // Configuración Visual y Módulos (ACM)
+    themeColor: { 
+      type: String, 
+      default: '#121212', 
+      maxlength: 7 
+    },
+    isBlogsEnabled: { 
+      type: Boolean, 
+      default: true 
+    },
+    isWikisEnabled: { 
+      type: Boolean, 
+      default: true 
     }
   },
   { timestamps: true }
