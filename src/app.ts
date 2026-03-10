@@ -12,6 +12,7 @@ import chatRoutes from './modules/chats/chat.routes';
 import wikiRoutes from './modules/wikis/wiki.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
 import likeRoutes from './modules/likes/like.routes';
+import economyRoutes from './modules/economy/economy.routes'
 
 const app: Application = express();
 
@@ -35,6 +36,7 @@ app.use(`${apiPrefix}/chats`, chatRoutes);
 app.use(`${apiPrefix}/notifications`, notificationRoutes);
 app.use(`${apiPrefix}/wikis`, wikiRoutes);
 app.use(`${apiPrefix}/likes`, likeRoutes);
+app.use(`${apiPrefix}/economy`, economyRoutes);
 
 
 export default app;

@@ -7,6 +7,9 @@ import { ChatModel } from '../chats/chat.model';
 import { MessageModel } from '../chats/messege.model';
 import { CommentModel } from '../comments/comment.model';
 import { NotificationModel } from '../notifications/notification.model';
+import { UserModel } from '../users/user.model';
+import { TransactionModel } from '../economy/transaction.model';
+import { config } from '../../config';
 
 interface CreateCommunityDTO {
   name: string;
@@ -22,15 +25,44 @@ export const createCommunityService = async (data: CreateCommunityDTO) => {
     throw new Error('Ya existe una comunidad con este nombre');
   }
 
-  // Crear la comunidad inyectando la visibilidad (si no la mandan, por defecto será 'public')
+  // Obtenemos el costo desde el archivo de configuración global
+  const creationCost = config.economy.worldCreationCost;
+
+  // 1. VERIFICAR FONDOS DEL CREADOR
+  const user = await UserModel.findById(data.ownerId);
+  if (!user) {
+    throw new Error('Usuario no encontrado');
+  }
+
+  if (user.legacyCoins < creationCost) {
+    throw new Error(`Fondos insuficientes. La licencia para crear un mundo cuesta ${creationCost} Legacy Coins y tu saldo actual es de ${user.legacyCoins}.`);
+  }
+
+  // 2. COBRAR LA LICENCIA
+  user.legacyCoins -= creationCost;
+  await user.save();
+
+  // 3. CREAR LA COMUNIDAD
   const newCommunity = await CommunityModel.create({
     name: data.name,
     description: data.description,
     ownerId: data.ownerId,
     visibility: data.visibility || 'public',
-    listingStatus: 'none' // Siempre nacen sin estar listadas
+    listingStatus: 'none',
+    treasuryBalance: 0 
   });
 
+  // 4. REGISTRAR LA TRANSACCIÓN EN EL LIBRO MAYOR
+  await TransactionModel.create({
+    type: 'world_creation',
+    senderId: user._id,
+    amount: creationCost,
+    taxBurned: creationCost, 
+    netAmount: 0,
+    description: `Pago de licencia por la creación del mundo: ${newCommunity.name}`
+  });
+
+  // 5. CREAR PERFIL DEL AGENTE
   await CommunityMemberModel.create({
     userId: data.ownerId,
     communityId: newCommunity._id,
@@ -56,7 +88,6 @@ export const searchCommunitiesService = async (searchQuery: string) => {
       { name: regex },
       { description: regex }
     ],
-    // REGLAS DEL BUSCADOR: Solo mostrar comunidades públicas y aprobadas por el Team Legacy
     visibility: 'public',
     listingStatus: 'approved'
   })
@@ -98,7 +129,6 @@ export const deleteCommunityService = async (communityId: string, userId: string
     throw new Error('Solo el creador absoluto de la comunidad puede eliminarla');
   }
 
-  // REGLA DE INMORTALIDAD
   if (community.listingStatus === 'approved') {
     throw new Error('Esta comunidad ha sido listada oficialmente y no puede ser eliminada. Si deseas retirarte, debes transferir el rol de Agente a otro miembro del staff.');
   }
@@ -106,7 +136,6 @@ export const deleteCommunityService = async (communityId: string, userId: string
   const communityChats = await ChatModel.find({ communityId });
   const chatIds = communityChats.map(chat => chat._id);
 
-  // BORRADO EN CASCADA PARALELO
   await Promise.all([
     CommunityMemberModel.deleteMany({ communityId }),
     PostModel.deleteMany({ communityId }),

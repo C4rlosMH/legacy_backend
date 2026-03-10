@@ -5,6 +5,7 @@ export interface ITransaction extends Document {
   type: 'mint_fiat' | 'mint_ads' | 'mint_faucet' | 'tip_post' | 'store_purchase' | 'treasury_award' | 'world_creation';
   senderId?: mongoose.Types.ObjectId; // Null si el sistema imprime el dinero
   receiverId?: mongoose.Types.ObjectId; // User o Community (Tesorería)
+  receiverModel?: 'User' | 'Community';
   communityId?: mongoose.Types.ObjectId; // Si ocurrió dentro de un mundo
   amount: number; // Monto bruto
   taxBurned: number; // El 30% que se quema (si aplica)

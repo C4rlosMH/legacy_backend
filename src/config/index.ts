@@ -23,5 +23,10 @@ export const config = {
   limits: {
     maxBioLength: 160,
     maxUsernameLength: 30,
+  },
+  economy: {
+    transactionTaxRate: 0.30,   // Impuesto del 30% para transacciones P2P
+    worldCreationCost: 100,     // Costo de crear una nueva comunidad
+    welcomeGrant: 100,          // Legacy Coins regaladas al registrarse
   }
 };
