@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { 
   joinCommunity, leaveCommunity, getUserCommunities, updateCommunityProfile, 
-  updateMemberRole, toggleHideProfile, kickMember
+  updateMemberRole, toggleHideProfile, kickMember, getPendingRequests, processJoinRequest,
 } from './community-member.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
@@ -13,6 +13,18 @@ router.post('/:communityId/join', verifyToken, joinCommunity);
 
 // Ruta: GET /api/v1/community-members/my
 router.get('/my', verifyToken, getUserCommunities);
+
+// Ver solicitudes pendientes
+router.get('/:communityId/requests', verifyToken,
+  requireCommunityRole(['owner', 'admin']), // <-- REGLA ESTRICTA APLICADA
+  getPendingRequests
+);
+
+// Aprobar o rechazar solicitud
+router.put('/:communityId/requests/:requestId', verifyToken,
+  requireCommunityRole(['owner', 'admin']), // <-- REGLA ESTRICTA APLICADA
+  processJoinRequest
+);
 
 // Actualizar mi perfil (personaje/apodo) dentro de una comunidad específica
 router.put('/:communityId/profile',  verifyToken, 

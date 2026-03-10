@@ -13,29 +13,30 @@ interface CreateCommunityDTO {
   description: string;
   ownerId: string;
   ownerNickname: string;
+  visibility?: 'public' | 'unlisted' | 'private';
 }
 
 export const createCommunityService = async (data: CreateCommunityDTO) => {
-  // 1. Validar que el nombre no exista (los nombres de universos suelen ser únicos)
   const existingCommunity = await CommunityModel.findOne({ name: data.name });
   if (existingCommunity) {
     throw new Error('Ya existe una comunidad con este nombre');
   }
 
-  // 2. Crear la comunidad
+  // Crear la comunidad inyectando la visibilidad (si no la mandan, por defecto será 'public')
   const newCommunity = await CommunityModel.create({
     name: data.name,
     description: data.description,
     ownerId: data.ownerId,
+    visibility: data.visibility || 'public',
+    listingStatus: 'none' // Siempre nacen sin estar listadas
   });
 
-  // 3. Crear automáticamente el perfil del Líder Agente (Owner) dentro de este universo
   await CommunityMemberModel.create({
     userId: data.ownerId,
     communityId: newCommunity._id,
     nickname: data.ownerNickname,
     role: 'owner',
-    roleplayData: {} // Inicializamos vacío
+    roleplayData: {} 
   });
 
   return newCommunity;
@@ -48,18 +49,19 @@ export const getCommunityDetailsService = async (communityId: string) => {
 };
 
 export const searchCommunitiesService = async (searchQuery: string) => {
-  // Creamos una expresión regular que ignore mayúsculas y minúsculas ('i')
   const regex = new RegExp(searchQuery, 'i');
 
-  // Buscamos comunidades donde el nombre o la descripción coincidan con el texto
   const communities = await CommunityModel.find({
     $or: [
       { name: regex },
       { description: regex }
-    ]
+    ],
+    // REGLAS DEL BUSCADOR: Solo mostrar comunidades públicas y aprobadas por el Team Legacy
+    visibility: 'public',
+    listingStatus: 'approved'
   })
-  .select('name description avatar banner createdAt') // Traemos solo lo necesario para la tarjeta de búsqueda
-  .limit(20); // Limitamos a 20 resultados para no saturar la red
+  .select('name description visibility listingStatus avatar banner createdAt') 
+  .limit(20); 
 
   return communities;
 };
@@ -74,7 +76,7 @@ interface UpdateCommunityDTO {
 export const updateCommunitySettingsService = async (communityId: string, data: UpdateCommunityDTO) => {
   const updatedCommunity = await CommunityModel.findByIdAndUpdate(
     communityId,
-    { $set: data }, // Actualizamos solo los campos que se envíen
+    { $set: data }, 
     { new: true, runValidators: true }
   );
 
@@ -92,27 +94,29 @@ export const deleteCommunityService = async (communityId: string, userId: string
     throw new Error('La comunidad no existe');
   }
 
-  // Verificamos de forma estricta que quien intenta borrarla sea el creador original
   if (community.ownerId.toString() !== userId) {
     throw new Error('Solo el creador absoluto de la comunidad puede eliminarla');
   }
 
-  // 1. Encontramos todos los chats de esta comunidad para poder borrar sus mensajes internos
+  // REGLA DE INMORTALIDAD
+  if (community.listingStatus === 'approved') {
+    throw new Error('Esta comunidad ha sido listada oficialmente y no puede ser eliminada. Si deseas retirarte, debes transferir el rol de Agente a otro miembro del staff.');
+  }
+
   const communityChats = await ChatModel.find({ communityId });
   const chatIds = communityChats.map(chat => chat._id);
 
-  // 2. BORRADO EN CASCADA PARALELO
+  // BORRADO EN CASCADA PARALELO
   await Promise.all([
     CommunityMemberModel.deleteMany({ communityId }),
     PostModel.deleteMany({ communityId }),
     WikiModel.deleteMany({ communityId }),
     WikiCategoryModel.deleteMany({ communityId }),
-    MessageModel.deleteMany({ chatId: { $in: chatIds } }), // Borramos los mensajes de esos chats
+    MessageModel.deleteMany({ chatId: { $in: chatIds } }), 
     ChatModel.deleteMany({ communityId }),
     CommentModel.deleteMany({ communityId }),
     NotificationModel.deleteMany({ communityId }),
     
-    // Finalmente borramos el registro de la comunidad
     community.deleteOne() 
   ]);
 

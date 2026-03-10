@@ -1,17 +1,16 @@
 import { Request, Response } from 'express';
 import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService, 
   updateMemberRoleService, toggleHideProfileService, kickMemberService, leaveCommunityService,
+  getPendingRequestsService, processJoinRequestService,
 } from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
 
 export const joinCommunity = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // 1. Extraemos el communityId y le decimos explícitamente a TypeScript que lo trate como string
     const communityId = req.params.communityId as string; 
-    const { userId, nickname } = req.body;
+    const { userId, nickname, message } = req.body; // Añadido message
 
-    // 2. Validamos que tengamos todos los datos y que tengan el formato correcto
     if (!communityId || typeof communityId !== 'string') {
       res.status(400).json({ message: 'El ID de la comunidad no es válido o está ausente' });
       return;
@@ -22,18 +21,49 @@ export const joinCommunity = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const newMember = await joinCommunityService({
+    const result = await joinCommunityService({
       userId,
       communityId,
-      nickname
+      nickname,
+      message
     });
 
-    res.status(201).json({
-      message: 'Te has unido a la comunidad exitosamente',
-      memberProfile: newMember
+    res.status(result.type === 'member' ? 201 : 200).json({
+      message: result.message,
+      data: result.data // Puede ser el memberProfile o el request
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al unirse a la comunidad' });
+  }
+};
+
+export const getPendingRequests = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    const requests = await getPendingRequestsService(communityId);
+    
+    res.status(200).json({ requests });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al obtener las solicitudes' });
+  }
+};
+
+export const processJoinRequest = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    const requestId = req.params.requestId as string;
+    const { action } = req.body;
+
+    if (!['approved', 'rejected'].includes(action)) {
+      res.status(400).json({ message: 'Acción no válida. Debe ser approved o rejected' });
+      return;
+    }
+
+    const result = await processJoinRequestService(requestId, communityId, action as 'approved' | 'rejected');
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al procesar la solicitud' });
   }
 };
 

@@ -3,15 +3,13 @@ import { createCommunityService, getCommunityDetailsService, searchCommunitiesSe
   updateCommunitySettingsService, deleteCommunityService,
  } from './community.service';
 import { config } from '../../config';
-import { AuthRequest } from '../../middlewares/auth.middleware'; // Importamos la interfaz extendida
+import { AuthRequest } from '../../middlewares/auth.middleware';
 
-// Nota que cambiamos Request por AuthRequest para que TypeScript reconozca req.user
 export const createCommunity = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // 1. Ya no extraemos el ownerId del body, porque un usuario malicioso podría falsificarlo.
-    const { name, description, ownerNickname } = req.body;
+    // Extraemos visibility desde el payload que envía el frontend
+    const { name, description, ownerNickname, visibility } = req.body;
     
-    // 2. Lo tomamos directamente del token de seguridad (garantizado por el middleware)
     const ownerId = req.user?.id;
 
     if (!ownerId) {
@@ -28,7 +26,8 @@ export const createCommunity = async (req: AuthRequest, res: Response): Promise<
       name,
       description: description || '',
       ownerId,
-      ownerNickname
+      ownerNickname,
+      visibility // Pasamos el dato al servicio
     });
 
     res.status(201).json({
@@ -52,7 +51,6 @@ export const getCommunityDetails = async (req: Request, res: Response): Promise<
 
 export const searchCommunities = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Extraemos el término de búsqueda de la URL (ej: /api/v1/communities/search?q=Marvel)
     const query = req.query.q as string;
 
     if (!query) {
@@ -73,7 +71,6 @@ export const searchCommunities = async (req: Request, res: Response): Promise<vo
 
 export const updateCommunitySettings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // El middleware de roles busca "communityId", así que lo extraeremos así
     const communityId = req.params.communityId as string;
     const { name, description, avatar, banner } = req.body;
 
