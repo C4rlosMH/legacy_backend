@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// Tipos de publicaciones rápidas en inglés
-export type PostType = 'thread' | 'blog' | 'announcement' | 'question' | 'link';
+// Tipos de publicaciones en inglés
+export type PostType = 'thread' | 'blog' | 'ad' | 'question' | 'link';
 
 export interface IPost extends Document {
   context: 'community' | 'global_thread';
@@ -16,11 +16,20 @@ export interface IPost extends Document {
   linkUrl?: string; 
   mediaUrls: string[];
   
+  // Contadores de caché
   likesCount: number;
   commentsCount: number;
   
+  // Moderación
   isHidden: boolean;
   isPinned: boolean;
+
+  // NUEVO: Campos para Preguntas
+  isResolved?: boolean;
+  acceptedAnswerId?: mongoose.Types.ObjectId;
+
+  // NUEVO: Campos para Anuncios
+  tags?: string[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -31,7 +40,7 @@ const PostSchema: Schema = new Schema(
     context: { type: String, enum: ['community', 'global_thread'], required: true },
     postType: { 
       type: String, 
-      enum: ['thread', 'blog', 'announcement', 'question', 'link'], 
+      enum: ['thread', 'blog', 'ad', 'question', 'link'], 
       default: 'thread' 
     },
     
@@ -48,11 +57,19 @@ const PostSchema: Schema = new Schema(
     commentsCount: { type: Number, default: 0 },
 
     isHidden: { type: Boolean, default: false },
-    isPinned: { type: Boolean, default: false }
+    isPinned: { type: Boolean, default: false },
+
+    // Campos para Preguntas
+    isResolved: { type: Boolean, default: false },
+    acceptedAnswerId: { type: Schema.Types.ObjectId, ref: 'Comment' },
+
+    // Campos para Anuncios
+    tags: [{ type: String, maxlength: 30 }]
   },
   { timestamps: true },
 );
 
+// Validaciones condicionales antes de guardar
 PostSchema.pre('save', function (this: IPost) {
   if (this.context === 'community') {
     if (!this.communityId || !this.authorMemberId) {
@@ -65,7 +82,9 @@ PostSchema.pre('save', function (this: IPost) {
   }
 });
 
-PostSchema.index({ communityId: 1, createdAt: -1 });
-PostSchema.index({ context: 1, createdAt: -1 });
+// Índices optimizados para filtrar por tipo en el feed
+PostSchema.index({ communityId: 1, postType: 1, createdAt: -1 });
+PostSchema.index({ context: 1, postType: 1, createdAt: -1 });
+PostSchema.index({ tags: 1 });
 
 export const PostModel = mongoose.model<IPost>('Post', PostSchema);
