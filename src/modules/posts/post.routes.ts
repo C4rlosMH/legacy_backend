@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { createPost, getCommunityFeed, getGlobalFeed, moderatePost } from './post.controller';
+import { createPost, getCommunityFeed, getGlobalFeed, moderatePost,
+  updatePost, deletePost
+ } from './post.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
@@ -8,6 +10,12 @@ const router = Router();
 
 // Ruta: POST /api/v1/posts
 router.post('/', verifyToken, createPost);
+
+// Ruta: PUT /api/v1/posts/:postId
+router.put('/:postId', verifyToken, updatePost);
+
+// Ruta: DELETE /api/v1/posts/:postId
+router.delete('/:postId', verifyToken, deletePost);
 
 // Ruta: GET /api/v1/posts/global
 router.get('/global', getGlobalFeed);

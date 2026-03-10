@@ -117,3 +117,18 @@ export const kickMemberService = async (communityId: string, targetUserId: strin
   await CommunityMemberModel.findByIdAndDelete(member._id);
   return { message: 'Usuario expulsado de la comunidad' };
 };
+
+export const leaveCommunityService = async (communityId: string, userId: string) => {
+  const member = await CommunityMemberModel.findOne({ communityId, userId });
+  
+  if (!member) {
+    throw new Error('No eres miembro de esta comunidad');
+  }
+
+  if (member.role === 'owner') {
+    throw new Error('El creador no puede abandonar la comunidad. Debes transferir el liderazgo o eliminarla por completo.');
+  }
+
+  await member.deleteOne();
+  return { message: 'Has abandonado la comunidad exitosamente' };
+};

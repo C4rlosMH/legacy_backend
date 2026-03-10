@@ -78,6 +78,41 @@ export const createCommentService = async (data: CreateCommentDTO) => {
   return newComment;
 };
 
+// NUEVA FUNCIÓN: Obtener comentarios paginados
+export const getCommentsService = async (targetType: string, targetId: string, page: number = 1, limit: number = 20) => {
+  const skip = (page - 1) * limit;
+
+  const comments = await CommentModel.find({ targetType, targetId })
+    .populate('authorId', 'name username avatar') // Perfil global
+    .populate('authorMemberId', 'nickname role avatar') // Perfil local (si existe)
+    .sort({ createdAt: -1 }) // Del más nuevo al más viejo
+    .skip(skip)
+    .limit(limit)
+    .lean();
+
+  // Si el usuario fue expulsado de la comunidad, su authorMemberId será null tras el populate.
+  // Podrías mapearlo aquí si necesitas enviar un mensaje por defecto al frontend.
+  const processedComments = comments.map(comment => {
+    if (comment.communityId && !comment.authorMemberId) {
+      comment.authorMemberId = { nickname: 'Usuario Desconocido', role: 'member', avatar: '' } as any;
+    }
+    return comment;
+  });
+
+  const total = await CommentModel.countDocuments({ targetType, targetId });
+
+  return {
+    comments: processedComments,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
+};
+
+// FUNCIÓN ACTUALIZADA: Eliminar con permisos avanzados
 export const deleteCommentService = async (commentId: string, userId: string) => {
   const comment = await CommentModel.findById(commentId);
 
@@ -85,21 +120,37 @@ export const deleteCommentService = async (commentId: string, userId: string) =>
     throw new Error('El comentario no existe');
   }
 
-  // Verificamos que quien intenta borrar el comentario sea el autor
-  if (comment.authorId.toString() !== userId) {
+  let hasPermission = false;
+
+  // 1. El autor del comentario siempre puede borrarlo
+  if (comment.authorId.toString() === userId) {
+    hasPermission = true;
+  } 
+  // 2. Si el comentario está en una comunidad, verificamos si el usuario es staff
+  else if (comment.communityId) {
+    const membership = await CommunityMemberModel.findOne({ userId, communityId: comment.communityId });
+    if (membership && ['owner', 'admin', 'moderator'].includes(membership.role)) {
+      hasPermission = true;
+    }
+  } 
+  // 3. Si es un comentario en un muro personal, el dueño de la cuenta puede borrarlo
+  else if (comment.targetType === 'user_wall' && comment.targetId.toString() === userId) {
+    hasPermission = true;
+  }
+
+  if (!hasPermission) {
     throw new Error('No tienes permiso para eliminar este comentario');
   }
 
-  // Descontamos 1 del contador respectivo antes de borrar el comentario
+  // Descontamos 1 del contador respectivo antes de borrar
   if (comment.targetType === 'post') {
     await PostModel.findByIdAndUpdate(comment.targetId, { $inc: { commentsCount: -1 } });
   } else if (comment.targetType === 'wiki') {
     await WikiModel.findByIdAndUpdate(comment.targetId, { $inc: { commentsCount: -1 } });
   }
-  // Nota: Si en el futuro agregas un contador de comentarios al muro del usuario, lo pondrías aquí.
 
-  // Eliminamos el documento
   await comment.deleteOne();
 
   return { message: 'Comentario eliminado exitosamente' };
 };
+

@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import { createCommunity, getCommunityDetails, searchCommunities, updateCommunitySettings } from './community.controller';
+import { createCommunity, getCommunityDetails, searchCommunities, updateCommunitySettings,
+  deleteCommunity,
+ } from './community.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
@@ -22,5 +24,9 @@ router.put(
 // Aquí a futuro agregaremos rutas como:
 router.get('/:id', getCommunityDetails);
 // router.put('/:id', updateCommunity);
+
+// Ruta: DELETE /api/v1/communities/:communityId
+// Peligro: Borrado total. Solo el Owner puede pasar.
+router.delete('/:communityId', verifyToken, requireCommunityRole(['owner']), deleteCommunity);
 
 export default router;

@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
 import { 
-  createUserService, 
-  loginUserService, 
-  getUserProfileService,
-  updateGlobalProfileService
+  createUserService, loginUserService, getUserProfileService,
+  updateGlobalProfileService, deleteUserAccountService,
 } from './user.service';
 import { config } from '../../config'; 
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -81,5 +79,22 @@ export const updateGlobalProfile = async (req: AuthRequest, res: Response): Prom
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al actualizar el perfil global' });
+  }
+};
+
+export const deleteUserAccount = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const result = await deleteUserAccountService(userId);
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al eliminar la cuenta' });
   }
 };

@@ -1,11 +1,7 @@
 import { Router } from 'express';
 import { 
-  joinCommunity, 
-  getUserCommunities, 
-  updateCommunityProfile, 
-  updateMemberRole,
-  toggleHideProfile,
-  kickMember
+  joinCommunity, leaveCommunity, getUserCommunities, updateCommunityProfile, 
+  updateMemberRole, toggleHideProfile, kickMember
 } from './community-member.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
@@ -19,17 +15,13 @@ router.post('/:communityId/join', verifyToken, joinCommunity);
 router.get('/my', verifyToken, getUserCommunities);
 
 // Actualizar mi perfil (personaje/apodo) dentro de una comunidad específica
-router.put(
-  '/:communityId/profile', 
-  verifyToken, 
+router.put('/:communityId/profile',  verifyToken, 
   requireCommunityRole(['owner', 'admin', 'moderator', 'member']), 
   updateCommunityProfile
 );
 
 // Ascender o degradar roles
-router.put(
-  '/:communityId/roles/:targetUserId',
-  verifyToken,
+router.put('/:communityId/roles/:targetUserId', verifyToken,
   requireCommunityRole(['owner', 'admin']), // Solo Agentes y Líderes
   updateMemberRole
 );
@@ -37,19 +29,19 @@ router.put(
 // --- RUTAS DE MODERACIÓN DE USUARIOS ---
 
 // Ocultar o mostrar el perfil de un usuario
-router.put(
-  '/:communityId/hide-profile/:targetUserId',
-  verifyToken,
+router.put('/:communityId/hide-profile/:targetUserId', verifyToken,
   requireCommunityRole(['owner', 'admin', 'moderator']), // Curadores (Moderators) también pueden
   toggleHideProfile
 );
 
 // Expulsar a un miembro
-router.delete(
-  '/:communityId/kick/:targetUserId',
-  verifyToken,
+router.delete('/:communityId/kick/:targetUserId', verifyToken,
   requireCommunityRole(['owner', 'admin']), // Curadores NO pueden expulsar
   kickMember
 );
+
+// Salir de la comunidad
+// Ruta: DELETE /api/v1/community-members/:communityId/leave
+router.delete('/:communityId/leave', verifyToken, leaveCommunity);
 
 export default router;

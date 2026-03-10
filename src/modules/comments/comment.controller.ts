@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createCommentService, deleteCommentService } from './comment.service';
+import { createCommentService, deleteCommentService, getCommentsService } from './comment.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
 export const createComment = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -31,6 +31,29 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al publicar el comentario' });
+  }
+};
+
+export const getComments = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const targetType = req.params.targetType as string;
+    const targetId = req.params.targetId as string;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+
+    if (!['post', 'user_wall', 'wiki'].includes(targetType)) {
+      res.status(400).json({ message: 'Tipo de objetivo no válido' });
+      return;
+    }
+
+    const result = await getCommentsService(targetType, targetId, page, limit);
+
+    res.status(200).json({
+      message: 'Comentarios obtenidos exitosamente',
+      ...result
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al obtener los comentarios' });
   }
 };
 

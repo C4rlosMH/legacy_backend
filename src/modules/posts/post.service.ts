@@ -92,3 +92,46 @@ export const moderatePostService = async (
   return post;
 };
 
+interface UpdatePostDTO {
+  title?: string;
+  content?: string;
+  linkUrl?: string;
+  mediaUrls?: string[];
+}
+
+export const updatePostService = async (postId: string, userId: string, data: UpdatePostDTO) => {
+  const post = await PostModel.findById(postId);
+  
+  if (!post) {
+    throw new Error('El post no existe');
+  }
+
+  // Verificamos que el usuario sea el autor original
+  if (post.authorId.toString() !== userId) {
+    throw new Error('No tienes permiso para editar este post');
+  }
+
+  // Actualizamos solo los campos permitidos y que vengan en la petición
+  if (data.title !== undefined) post.title = data.title;
+  if (data.content !== undefined) post.content = data.content;
+  if (data.linkUrl !== undefined) post.linkUrl = data.linkUrl;
+  if (data.mediaUrls !== undefined) post.mediaUrls = data.mediaUrls;
+
+  await post.save();
+  return post;
+};
+
+export const deletePostService = async (postId: string, userId: string) => {
+  const post = await PostModel.findById(postId);
+  
+  if (!post) {
+    throw new Error('El post no existe');
+  }
+
+  if (post.authorId.toString() !== userId) {
+    throw new Error('No tienes permiso para eliminar este post');
+  }
+
+  await post.deleteOne();
+  return { message: 'Publicación eliminada exitosamente' };
+};

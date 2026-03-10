@@ -1,5 +1,12 @@
 import { CommunityModel } from './community.model';
 import { CommunityMemberModel } from '../community-members/community-member.model';
+import { PostModel } from '../posts/post.model';
+import { WikiModel } from '../wikis/wiki.model';
+import { WikiCategoryModel } from '../wikis/wiki-category.model';
+import { ChatModel } from '../chats/chat.model';
+import { MessageModel } from '../chats/messege.model';
+import { CommentModel } from '../comments/comment.model';
+import { NotificationModel } from '../notifications/notification.model';
 
 interface CreateCommunityDTO {
   name: string;
@@ -76,4 +83,38 @@ export const updateCommunitySettingsService = async (communityId: string, data: 
   }
 
   return updatedCommunity;
+};
+
+export const deleteCommunityService = async (communityId: string, userId: string) => {
+  const community = await CommunityModel.findById(communityId);
+  
+  if (!community) {
+    throw new Error('La comunidad no existe');
+  }
+
+  // Verificamos de forma estricta que quien intenta borrarla sea el creador original
+  if (community.ownerId.toString() !== userId) {
+    throw new Error('Solo el creador absoluto de la comunidad puede eliminarla');
+  }
+
+  // 1. Encontramos todos los chats de esta comunidad para poder borrar sus mensajes internos
+  const communityChats = await ChatModel.find({ communityId });
+  const chatIds = communityChats.map(chat => chat._id);
+
+  // 2. BORRADO EN CASCADA PARALELO
+  await Promise.all([
+    CommunityMemberModel.deleteMany({ communityId }),
+    PostModel.deleteMany({ communityId }),
+    WikiModel.deleteMany({ communityId }),
+    WikiCategoryModel.deleteMany({ communityId }),
+    MessageModel.deleteMany({ chatId: { $in: chatIds } }), // Borramos los mensajes de esos chats
+    ChatModel.deleteMany({ communityId }),
+    CommentModel.deleteMany({ communityId }),
+    NotificationModel.deleteMany({ communityId }),
+    
+    // Finalmente borramos el registro de la comunidad
+    community.deleteOne() 
+  ]);
+
+  return { message: 'El universo y todos sus datos internos han sido eliminados permanentemente' };
 };

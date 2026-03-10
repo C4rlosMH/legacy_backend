@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { createCommunityService, getCommunityDetailsService, searchCommunitiesService,
-  updateCommunitySettingsService,
+  updateCommunitySettingsService, deleteCommunityService,
  } from './community.service';
 import { config } from '../../config';
 import { AuthRequest } from '../../middlewares/auth.middleware'; // Importamos la interfaz extendida
@@ -90,5 +90,23 @@ export const updateCommunitySettings = async (req: AuthRequest, res: Response): 
     });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al actualizar la comunidad' });
+  }
+};
+
+export const deleteCommunity = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const communityId = req.params.communityId as string;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const result = await deleteCommunityService(communityId, userId);
+
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al eliminar la comunidad' });
   }
 };

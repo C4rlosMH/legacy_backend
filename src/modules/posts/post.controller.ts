@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { createPostService, getCommunityFeedService, getGlobalFeedService,
-  moderatePostService,
+  moderatePostService, updatePostService, deletePostService,
  } from './post.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
@@ -85,5 +85,45 @@ export const moderatePost = async (req: AuthRequest, res: Response): Promise<voi
     res.status(200).json({ message: `Acción '${action}' ejecutada con éxito`, data: result });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al moderar el post' });
+  }
+};
+
+export const updatePost = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const postId = req.params.postId as string;
+    const updateData = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const updatedPost = await updatePostService(postId, userId, updateData);
+    
+    res.status(200).json({ 
+      message: 'Publicación actualizada', 
+      post: updatedPost 
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar la publicación' });
+  }
+};
+
+export const deletePost = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const postId = req.params.postId as string;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const result = await deletePostService(postId, userId);
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al eliminar la publicación' });
   }
 };

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService, 
-  updateMemberRoleService, toggleHideProfileService, kickMemberService
+  updateMemberRoleService, toggleHideProfileService, kickMemberService, leaveCommunityService,
 } from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
@@ -145,5 +145,22 @@ export const kickMember = async (req: AuthRequest, res: Response): Promise<void>
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al expulsar al usuario' });
+  }
+};
+
+export const leaveCommunity = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const communityId = req.params.communityId as string;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const result = await leaveCommunityService(communityId, userId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al abandonar la comunidad' });
   }
 };
