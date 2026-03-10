@@ -1,6 +1,7 @@
 import { PostModel } from './post.model';
 import { CommunityModel } from '../communities/community.model';
 import { CommunityMemberModel } from '../community-members/community-member.model';
+import { addMemberXPService } from '../community-members/community-member.service';
 
 interface CreatePostDTO {
   authorId: string;
@@ -12,7 +13,7 @@ interface CreatePostDTO {
 }
 
 export const createPostService = async (data: CreatePostDTO) => {
-  let authorMemberId; // La dejamos sin inicializar explícitamente con undefined
+  let authorMemberId;
 
   if (data.context === 'community') {
     if (!data.communityId) throw new Error('Debes proporcionar el ID de la comunidad');
@@ -29,14 +30,18 @@ export const createPostService = async (data: CreatePostDTO) => {
     authorMemberId = memberProfile._id;
   }
 
-  // Solución: Solo agregamos authorMemberId al objeto si realmente tiene un valor.
-  // Si no tiene valor, la propiedad simplemente no existirá en postData, respetando tu tsconfig.
   const postData = {
     ...data,
     ...(authorMemberId && { authorMemberId })
   };
 
   const newPost = await PostModel.create(postData);
+
+  // LOGICA DE GAMIFICACIÓN: Otorgar XP por publicar
+  if (data.context === 'community' && data.communityId) {
+    // Otorgamos 5 XP por post (puedes mover este '5' también al config si gustas)
+    await addMemberXPService(data.authorId, data.communityId, 5);
+  }
 
   return newPost;
 };

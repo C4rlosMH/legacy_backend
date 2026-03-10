@@ -2,6 +2,7 @@ import { CommunityModel } from '../communities/community.model';
 import { CommunityMemberModel } from './community-member.model';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
 import { CommunityRequestModel } from './community-request.model';
+import { getLevelFromXP } from '../../utils/level.util';
 
 interface JoinCommunityDTO {
   userId: string;
@@ -193,4 +194,60 @@ export const leaveCommunityService = async (communityId: string, userId: string)
 
   await member.deleteOne();
   return { message: 'Has abandonado la comunidad exitosamente' };
+};
+
+export const communityCheckInService = async (userId: string, communityId: string) => {
+  const member = await CommunityMemberModel.findOne({ userId, communityId });
+  
+  if (!member) throw new Error('No eres miembro de este mundo.');
+
+  const now = new Date();
+  const lastCheckIn = member.lastCheckIn;
+
+  if (lastCheckIn) {
+    const isSameDay = lastCheckIn.toDateString() === now.toDateString();
+    if (isSameDay) throw new Error('Ya hiciste check-in en este mundo hoy.');
+  }
+
+  // Lógica de racha (Streak)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const maintainedStreak = lastCheckIn && lastCheckIn.toDateString() === yesterday.toDateString();
+  
+  member.checkInStreak = maintainedStreak ? member.checkInStreak + 1 : 1;
+  
+  // Recompensas: 20 XP base + (Racha * 2)
+  const xpGain = 20 + (member.checkInStreak * 2);
+  member.experience += xpGain;
+  member.lastCheckIn = now;
+
+  // Calcular si subió de nivel
+  const newLevel = getLevelFromXP(member.experience);
+  const leveledUp = newLevel > member.level;
+  member.level = newLevel;
+
+  await member.save();
+
+  return {
+    xpGained: xpGain,
+    currentLevel: member.level,
+    streak: member.checkInStreak,
+    leveledUp
+  };
+};
+
+export const addMemberXPService = async (userId: string, communityId: string, amount: number) => {
+  const member = await CommunityMemberModel.findOne({ userId, communityId });
+  if (!member) return;
+
+  member.experience += amount;
+  
+  const nextLevel = getLevelFromXP(member.experience);
+  
+  if (nextLevel > member.level) {
+    member.level = nextLevel;
+    // Aquí podrías disparar una notificación de "¡Subiste de nivel!"
+  }
+
+  await member.save();
 };

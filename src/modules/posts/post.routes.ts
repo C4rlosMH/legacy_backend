@@ -4,12 +4,14 @@ import { createPost, getCommunityFeed, getGlobalFeed, moderatePost,
  } from './post.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
+import { requireLevel } from '../../middlewares/level-gate.middleware';
+import { config } from '../../config';
 
 
 const router = Router();
 
 // Ruta: POST /api/v1/posts
-router.post('/', verifyToken, createPost);
+router.post('/',  verifyToken, requireLevel(config.permissions.minLevelToPost), createPost);
 
 // Ruta: PUT /api/v1/posts/:postId
 router.put('/:postId', verifyToken, updatePost);

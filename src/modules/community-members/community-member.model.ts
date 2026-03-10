@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { config } from '../../config';
 
 export interface ICommunityMember extends Document {
   userId: mongoose.Types.ObjectId;
@@ -9,6 +10,12 @@ export interface ICommunityMember extends Document {
   role: 'owner' | 'admin' | 'moderator' | 'member';
   roleplayData?: Record<string, any>;
   isHidden: boolean; // Bandera de moderación
+
+  level: number;
+  experience: number;
+  lastCheckIn?: Date;
+  checkInStreak: number;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +40,23 @@ const CommunityMemberSchema: Schema = new Schema(
       type: Schema.Types.Mixed, 
       default: {}
     },
-    isHidden: { type: Boolean, default: false } // Bandera para que los curadores oculten perfiles
+    isHidden: { type: Boolean, default: false }, // Bandera para que los curadores oculten perfiles
+    level: { 
+      type: Number, 
+      default: 1, 
+      min: 1, 
+      max: config.gamification.maxLevel // <--- AHORA ES DINÁMICO
+    },
+    experience: { 
+      type: Number, 
+      default: 0, 
+      min: 0 
+    },
+    lastCheckIn: { type: Date },
+    checkInStreak: { 
+      type: Number, 
+      default: 0 
+    },
   },
   { timestamps: true }
 );
