@@ -5,6 +5,8 @@ import { createWiki, submitWiki, moderateWiki, updateWiki, getWiki, deleteWiki,
 import { createCategory, getCategories, updateCategory, deleteCategory } from './wiki-category.controller'; // <-- NUEVO
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
+import { requireLevel } from '../../middlewares/level-gate.middleware';
+import { config } from '../../config';
 
 const router = Router();
 
@@ -103,6 +105,15 @@ router.delete(
   verifyToken,
   requireCommunityRole(['owner', 'admin', 'moderator', 'member']),
   deleteWiki
+);
+
+// Ruta: POST /api/v1/wikis/:communityId
+router.post(
+  '/:communityId',
+  verifyToken,
+  requireCommunityRole(['owner', 'admin', 'moderator', 'member']),
+  requireLevel(config.permissions.minLevelToPost), // <--- BARRERA DE NIVEL AÑADIDA
+  createWiki
 );
 
 export default router;

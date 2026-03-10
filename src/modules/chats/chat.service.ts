@@ -1,5 +1,6 @@
 import { ChatModel } from './chat.model';
 import { MessageModel } from './messege.model';
+import { addMemberXPService } from '../community-members/community-member.service';
 
 // 1. Obtener o crear una sala de chat directo global
 export const getOrCreateGlobalDirectChatService = async (user1Id: string, user2Id: string) => {
@@ -49,9 +50,15 @@ export const sendMessageService = async (chatId: string, senderId: string, conte
 
   // Actualizamos la sala de chat para que este nuevo mensaje sea el "lastMessage"
   // Esto hará que la bandeja de entrada se actualice automáticamente
-  await ChatModel.findByIdAndUpdate(chatId, {
-    lastMessage: newMessage._id
-  });
+  await ChatModel.findByIdAndUpdate(chatId, {lastMessage: newMessage._id});
+
+  // REGLA DE GAMIFICACIÓN: +2 XP si el mensaje tiene 10+ caracteres (y si están dentro de un universo)
+  if (chat.scope === 'community' && chat.communityId && content.trim().length >= 10) {
+    // Nota: Como no await-eamos, esto se ejecuta en segundo plano sin ralentizar el envío del mensaje
+    addMemberXPService(senderId, chat.communityId.toString(), 2).catch(err => 
+      console.error('Error al dar XP por mensaje:', err)
+    );
+  }
 
   return newMessage;
 };

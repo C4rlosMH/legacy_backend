@@ -1,5 +1,6 @@
 import { WikiModel, IWikiAttribute } from './wiki.model';
 import { CommunityMemberModel } from '../community-members/community-member.model';
+import { addMemberXPService } from '../community-members/community-member.service';
 
 export interface CreateWikiDTO {
   title: string;
@@ -26,7 +27,10 @@ export const createWikiService = async (userId: string, communityId: string, dat
     authorMemberId: authorMember._id,
     catalogStatus: 'none'
   });
-
+  
+  // LOGICA DE GAMIFICACIÓN: Otorgar +5 XP por crear una ficha
+  await addMemberXPService(userId, communityId, 5);
+  
   return newWiki;
 };
 
