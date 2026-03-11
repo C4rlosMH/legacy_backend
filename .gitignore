@@ -71,3 +71,6 @@ desktop.ini
 .eslintcache
 .stylelintcache
 .node_repl_history
+
+# Secret Protocols (Fase 4 Gobernanza)
+src/modules/governance/*.core.ts

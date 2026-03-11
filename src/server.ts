@@ -2,6 +2,7 @@ import app from './app';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database'; // Importamos la conexión
 import { config } from './config'; // Importamos la configuración
+import { startGovernanceCronJobs } from './modules/governance/governance.cron';
 
 // Cargar variables de entorno desde el archivo .env
 dotenv.config();
@@ -12,6 +13,8 @@ const startServer = async () => {
   try {
     // 1. Primero conectamos la base de datos
     await connectDB();
+
+    //startGovernanceCronJobs(); #descomentar cuando se hagan las pruebas
 
     // 2. Luego levantamos el servidor web
     app.listen(config.app.port, () => {

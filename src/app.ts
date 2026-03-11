@@ -13,6 +13,7 @@ import wikiRoutes from './modules/wikis/wiki.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
 import likeRoutes from './modules/likes/like.routes';
 import economyRoutes from './modules/economy/economy.routes'
+import insurrectionRoutes from './modules/governance/insurrection.routes';
 
 const app: Application = express();
 
@@ -21,10 +22,6 @@ app.use(express.json());
 
 // Usamos el prefijo desde la configuración
 const apiPrefix = config.api.prefix;
-
-app.get(`${apiPrefix}/health`, (req: Request, res: Response) => {
-  res.status(200).json({ status: 'success', message: 'Servidor funcionando.' });
-});
 
 // Registramos los módulos con el prefijo dinámico
 app.use(`${apiPrefix}/users`, userRoutes);
@@ -37,6 +34,6 @@ app.use(`${apiPrefix}/notifications`, notificationRoutes);
 app.use(`${apiPrefix}/wikis`, wikiRoutes);
 app.use(`${apiPrefix}/likes`, likeRoutes);
 app.use(`${apiPrefix}/economy`, economyRoutes);
-
+app.use('${apiPrefix}/governance/insurrections', insurrectionRoutes);
 
 export default app;

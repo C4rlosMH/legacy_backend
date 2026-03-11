@@ -25,14 +25,14 @@ export const config = {
     maxUsernameLength: 30,
   },
   economy: {
-    transactionTaxRate: 0.30,   // Impuesto del 30% para transacciones P2P
+    transactionTaxRate: Number(process.env.ECONOMY_TAX_RATE),   // Impuesto del % para transacciones P2P
     worldCreationCost: 100,     // Costo de crear una nueva comunidad
     welcomeGrant: 100,          // Legacy Coins regaladas al registrarse
   },
   gamification: {
     maxLevel: 20,           // Podrás cambiar esto a 30, 50, 100 después
     baseXP: 100,            // XP necesaria para nivel 2
-    difficultyCurve: 1.8,   // Qué tan rápido sube la dificultad
+    difficultyCurve: Number(process.env.GAMIFICATION_DIFFICULTY_CURVE),   // Qué tan rápido sube la dificultad
   },
   permissions: {
     minLevelToPost: 5,         // Nivel para Blogs/Hilos
@@ -40,5 +40,19 @@ export const config = {
     minLevelToCreateChat: 8,   // Nivel para salas públicas
     minLevelToVote: 10,        // Nivel para gobernanza
     minLevelToTip: 5,          // Nivel para enviar/recibir propinas
+  },
+  governance: {
+    insurrectionApprovalThreshold: Number(process.env.GOVERNANCE_INSURRECTION_THRESHOLD), 
+    
+    // NUEVO: Reglas para el Motín Interno del Staff
+    staffMutinyApprovalThreshold: Number(process.env.GOVERNANCE_STAFF_MUTINY_THRESHOLD),
+    minStaffForMutiny: Number(process.env.GOVERNANCE_MIN_STAFF_FOR_MUTINY),
+    
+    minEligibleVotersForInsurrection: 15, 
+    daysToConsiderInactive: 30, 
+    sentinelCriticalInactivityDays: 60, 
+    sentinelPurgeWarningDays: 14 ,
+
+    sentinelId: process.env.SYSTEM_SENTINEL_ID
   }
 };
