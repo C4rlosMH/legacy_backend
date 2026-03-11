@@ -43,16 +43,28 @@ export const config = {
   },
   governance: {
     insurrectionApprovalThreshold: Number(process.env.GOVERNANCE_INSURRECTION_THRESHOLD), 
-    
-    // NUEVO: Reglas para el Motín Interno del Staff
     staffMutinyApprovalThreshold: Number(process.env.GOVERNANCE_STAFF_MUTINY_THRESHOLD),
     minStaffForMutiny: Number(process.env.GOVERNANCE_MIN_STAFF_FOR_MUTINY),
-    
     minEligibleVotersForInsurrection: 15, 
     daysToConsiderInactive: 30, 
     sentinelCriticalInactivityDays: 60, 
     sentinelPurgeWarningDays: 14 ,
-
-    sentinelId: process.env.SYSTEM_SENTINEL_ID
-  }
+    sentinelId: process.env.SYSTEM_SENTINEL_ID,
+    sentinelEmail: process.env.SYSTEM_SENTINEL_EMAIL,
+    sentinelUsername: process.env.SYSTEM_SENTINEL_USERNAME,
+    sentinelPassword: process.env.SYSTEM_SENTINEL_PASSWORD,
+    sentinelMinAbsoluteMembers: Number(process.env.GOVERNANCE_MIN_ABSOLUTE_MEMBERS),
+    sentinelMinAbsolutePosts: Number(process.env.GOVERNANCE_MIN_ABSOLUTE_POSTS),
+    sentinelDynamicVitalityPercentage: Number(process.env.GOVERNANCE_DYNAMIC_VITALITY_PERCENTAGE),
+  },
+  communityRules: {
+    minDaysToList: Number(process.env.COMMUNITY_MIN_DAYS_TO_LIST),
+    minMembersToList: Number(process.env.COMMUNITY_MIN_MEMBERS_TO_LIST),
+    minActivityToList: Number(process.env.COMMUNITY_MIN_ACTIVITY_TO_LIST),
+    minDescLength: Number(process.env.COMMUNITY_MIN_DESC_LENGTH),
+    defaultThemeColor: process.env.COMMUNITY_DEFAULT_THEME_COLOR,
+    minTreasuryToList: Number(process.env.COMMUNITY_MIN_TREASURY_TO_LIST),
+    minStaffToList: Number(process.env.COMMUNITY_MIN_STAFF_TO_LIST),
+    minWikisToList: Number(process.env.COMMUNITY_MIN_WIKIS_TO_LIST),
+  },
 };

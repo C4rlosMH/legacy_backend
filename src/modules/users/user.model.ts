@@ -10,14 +10,19 @@ export interface IUser extends Document {
   bio?: string;
   
   // ==========================================
+  // ROL GLOBAL (Agregado para el Sistema)
+  // ==========================================
+  globalRole: 'user' | 'system';
+  
+  // ==========================================
   // NUEVOS CAMPOS: Economía, Membresía y Age Gate
   // ==========================================
-  legacyCoins: number; // No es opcional porque siempre tendrá un default de 100
+  legacyCoins: number; 
   premiumStatus: 'none' | 'active';
   premiumType: 'fiat' | 'coins' | null;
   premiumExpiresAt?: Date;
   lastDailyClaim?: Date;
-  birthDate?: Date; // Opcional por ahora para no romper el registro existente
+  birthDate?: Date; 
   
   createdAt: Date;
   updatedAt: Date;
@@ -56,11 +61,20 @@ const UserSchema: Schema = new Schema(
     bio: { type: String, maxlength: [300, 'La biografía no puede exceder los 300 caracteres'], default: '' },
     
     // ==========================================
+    // ROL GLOBAL
+    // ==========================================
+    globalRole: {
+      type: String,
+      enum: ['user', 'system'],
+      default: 'user'
+    },
+    
+    // ==========================================
     // CAMPOS DE ECONOMÍA Y LEGACY+
     // ==========================================
     legacyCoins: { 
       type: Number, 
-      default: 100, // Bono de bienvenida del protocolo Génesis
+      default: 100, 
       min: 0 
     },
     premiumStatus: { 

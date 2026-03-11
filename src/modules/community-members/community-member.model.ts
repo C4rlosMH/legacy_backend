@@ -7,7 +7,7 @@ export interface ICommunityMember extends Document {
   nickname: string;
   avatar?: string; // Agregado para el perfil local
   bio?: string;    // Agregado para el perfil local
-  role: 'owner' | 'admin' | 'moderator' | 'member';
+  role: 'system' | 'owner' | 'admin' | 'moderator' | 'member';
   roleplayData?: Record<string, any>;
   isHidden: boolean; // Bandera de moderación
 
@@ -33,7 +33,7 @@ const CommunityMemberSchema: Schema = new Schema(
     bio: { type: String, maxlength: 300, default: '' },
     role: { 
       type: String, 
-      enum: ['owner', 'admin', 'moderator', 'member'], 
+      enum: ['system', 'owner', 'admin', 'moderator', 'member'], 
       default: 'member' 
     },
     roleplayData: { 

@@ -5,15 +5,19 @@ export interface ICommunity extends Document {
   description: string;
   ownerId: mongoose.Types.ObjectId; 
   
-  // NUEVOS CAMPOS DE PRIVACIDAD Y LISTADO
+  // Privacidad y Listado
   visibility: 'public' | 'unlisted' | 'private';
   listingStatus: 'none' | 'pending' | 'approved' | 'rejected';
 
-  // NUEVOS CAMPOS: Tesorería y Personalización Visual
+  // Tesorería y Personalización Visual
   treasuryBalance: number;
   themeColor: string;
   isBlogsEnabled: boolean;
   isWikisEnabled: boolean;
+
+  // NUEVO: Protocolo Anti-Zombie
+  systemStatus: 'active' | 'warned' | 'zombie';
+  systemWarningDate?: Date | undefined;
   
   createdAt: Date;
   updatedAt: Date;
@@ -37,13 +41,11 @@ const CommunitySchema: Schema = new Schema(
       ref: 'User', 
       required: true 
     },
-    // Configuración de Privacidad
     visibility: {
       type: String,
       enum: ['public', 'unlisted', 'private'],
       default: 'public'
     },
-    // Configuración de Listado (Para el Buscador de Team Legacy)
     listingStatus: {
       type: String,
       enum: ['none', 'pending', 'approved', 'rejected'],
@@ -54,7 +56,6 @@ const CommunitySchema: Schema = new Schema(
       default: 0, 
       min: 0 
     },
-    // Configuración Visual y Módulos (ACM)
     themeColor: { 
       type: String, 
       default: '#121212', 
@@ -67,20 +68,27 @@ const CommunitySchema: Schema = new Schema(
     isWikisEnabled: { 
       type: Boolean, 
       default: true 
-    }
+    },
+    // Protocolo Anti-Zombie
+    systemStatus: {
+      type: String,
+      enum: ['active', 'warned', 'zombie'],
+      default: 'active'
+    },
+    systemWarningDate: { type: Date }
   },
   { timestamps: true }
 );
 
 // VALIDACIÓN INTELIGENTE ANTES DE GUARDAR
 CommunitySchema.pre('save', function (this: ICommunity) {
-  // Regla estricta: Las comunidades privadas no pueden estar listadas ni en revisión
   if (this.visibility === 'private' && this.listingStatus !== 'none') {
     throw new Error('Una comunidad privada no puede estar listada en el buscador global.');
   }
 });
 
-// Índice para hacer que el buscador global sea ultrarrápido filtrando por estado
+// Índices
 CommunitySchema.index({ visibility: 1, listingStatus: 1 });
+CommunitySchema.index({ systemStatus: 1 }); // Optimiza las búsquedas diarias del Cron Job
 
 export const CommunityModel = mongoose.model<ICommunity>('Community', CommunitySchema);

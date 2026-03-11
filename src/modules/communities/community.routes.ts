@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { createCommunity, getCommunityDetails, searchCommunities, updateCommunitySettings,
-  deleteCommunity,
+  deleteCommunity, requestListing, approveListing, rejectListing
  } from './community.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
@@ -28,5 +28,12 @@ router.get('/:id', getCommunityDetails);
 // Ruta: DELETE /api/v1/communities/:communityId
 // Peligro: Borrado total. Solo el Owner puede pasar.
 router.delete('/:communityId', verifyToken, requireCommunityRole(['owner']), deleteCommunity);
+
+router.post('/:communityId/request-listing', verifyToken, requestListing);
+
+router.post('/:communityId/approve-listing', verifyToken, approveListing);
+
+// POST: Rechazar un universo (Solo Team Legacy)
+router.post('/:communityId/reject-listing', verifyToken, rejectListing);
 
 export default router;

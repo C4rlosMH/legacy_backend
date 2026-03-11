@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { createCommunityService, getCommunityDetailsService, searchCommunitiesService,
-  updateCommunitySettingsService, deleteCommunityService,
+  updateCommunitySettingsService, deleteCommunityService, requestCommunityListingService,
+  approveCommunityListingService, rejectCommunityListingService,
  } from './community.service';
 import { config } from '../../config';
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -105,5 +106,45 @@ export const deleteCommunity = async (req: AuthRequest, res: Response): Promise<
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al eliminar la comunidad' });
+  }
+};
+
+export const requestListing = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    const userId = req.user?.id;
+
+    if (!userId) { res.status(401).json({ message: 'No autenticado' }); return; }
+
+    const result = await requestCommunityListingService(communityId, userId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const approveListing = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    if (!communityId) { res.status(400).json({ message: 'ID obligatorio.' }); return; }
+
+    const result = await approveCommunityListingService(communityId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const rejectListing = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    const { reason } = req.body;
+    
+    if (!communityId) { res.status(400).json({ message: 'ID obligatorio.' }); return; }
+
+    const result = await rejectCommunityListingService(communityId, reason);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
   }
 };
