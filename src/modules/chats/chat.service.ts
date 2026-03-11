@@ -1,11 +1,24 @@
 import { ChatModel } from './chat.model';
 import { MessageModel } from './messege.model';
+import { UserModel } from '../users/user.model';
 import { addMemberXPService } from '../community-members/community-member.service';
 
 // 1. Obtener o crear una sala de chat directo global
 export const getOrCreateGlobalDirectChatService = async (user1Id: string, user2Id: string) => {
   if (user1Id === user2Id) {
     throw new Error('No puedes crear un chat contigo mismo');
+  }
+
+  const user1 = await UserModel.findById(user1Id);
+  const user2 = await UserModel.findById(user2Id);
+
+  if (!user1 || !user2) throw new Error('Usuario no encontrado');
+
+  const user1BlockedUser2 = user1.blockedUsers && user1.blockedUsers.includes(user2Id as any);
+  const user2BlockedUser1 = user2.blockedUsers && user2.blockedUsers.includes(user1Id as any);
+
+  if (user1BlockedUser2 || user2BlockedUser1) {
+    throw new Error('No se puede crear o acceder a este chat debido a restricciones de bloqueo.');
   }
 
   // Buscamos si ya existe un chat directo global donde AMBOS usuarios sean participantes

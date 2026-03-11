@@ -34,6 +34,6 @@ app.use(`${apiPrefix}/notifications`, notificationRoutes);
 app.use(`${apiPrefix}/wikis`, wikiRoutes);
 app.use(`${apiPrefix}/likes`, likeRoutes);
 app.use(`${apiPrefix}/economy`, economyRoutes);
-app.use('${apiPrefix}/governance/insurrections', insurrectionRoutes);
+app.use(`${apiPrefix}/governance/insurrections`, insurrectionRoutes);
 
 export default app;

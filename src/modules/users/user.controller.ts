@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { 
-  createUserService, loginUserService, getUserProfileService,
-  updateGlobalProfileService, deleteUserAccountService,
+  createUserService, loginUserService, getUserProfileService, forgotPasswordService,
+  updateGlobalProfileService, deleteUserAccountService, resetPasswordService, verifyEmailService,
+  blockUserService, unblockUserService,
 } from './user.service';
 import { config } from '../../config'; 
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -96,5 +97,99 @@ export const deleteUserAccount = async (req: AuthRequest, res: Response): Promis
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al eliminar la cuenta' });
+  }
+};
+
+// ==========================================
+// CONTROLADORES DE SEGURIDAD (SPRINT 1)
+// ==========================================
+
+export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, token } = req.body;
+
+    if (!email || !token) {
+      res.status(400).json({ message: 'El correo electrónico y el código de verificación son obligatorios.' });
+      return;
+    }
+
+    const result = await verifyEmailService(email, token);
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al verificar el correo electrónico.' });
+  }
+};
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      res.status(400).json({ message: 'El correo electrónico es obligatorio.' });
+      return;
+    }
+
+    const result = await forgotPasswordService(email);
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al procesar la solicitud de recuperación.' });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { email, token, newPassword } = req.body;
+
+    if (!email || !token || !newPassword) {
+      res.status(400).json({ message: 'Faltan datos obligatorios (correo, código o nueva contraseña).' });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres.' });
+      return;
+    }
+
+    const result = await resetPasswordService(email, token, newPassword);
+    
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al restablecer la contraseña.' });
+  }
+};
+
+export const blockUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const targetUserId = req.params.targetUserId as string;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const result = await blockUserService(userId, targetUserId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al bloquear al usuario' });
+  }
+};
+
+export const unblockUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const targetUserId = req.params.targetUserId as string;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const result = await unblockUserService(userId, targetUserId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al desbloquear al usuario' });
   }
 };

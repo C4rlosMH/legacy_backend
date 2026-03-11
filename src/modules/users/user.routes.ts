@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { registerUser, loginUser, getUserProfile, updateGlobalProfile,
-    deleteUserAccount,
+import { registerUser, loginUser, getUserProfile, updateGlobalProfile, blockUser,
+    deleteUserAccount, verifyEmail, resetPassword, forgotPassword, unblockUser,
  } from './user.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 
@@ -9,6 +9,15 @@ const router = Router();
 // Rutas de autenticación
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+
+// Rutas de Identidad y Seguridad (Sprint 1)
+router.post('/verify-email', verifyEmail);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
+
+// Rutas de Bloqueo
+router.post('/block/:targetUserId', verifyToken, blockUser);
+router.post('/unblock/:targetUserId', verifyToken, unblockUser);
 
 // Ruta para actualizar tu propio perfil global (Protegida)
 // PUT /api/v1/users/profile

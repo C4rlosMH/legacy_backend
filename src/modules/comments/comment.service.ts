@@ -29,16 +29,17 @@ export const createCommentService = async (data: CreateCommentDTO) => {
   } else if (data.targetType === 'user_wall') {
     const userExists = await UserModel.findById(data.targetId);
     if (!userExists) throw new Error('El usuario al que intentas escribir no existe');
-  } else if (data.targetType === 'wiki') {
-    // <-- NUEVA LÓGICA PARA WIKIS
-    const wikiExists = await WikiModel.findById(data.targetId);
-    if (!wikiExists) throw new Error('La Wiki que intentas comentar no existe');
-    
-    if (wikiExists.communityId) {
-      if (String(wikiExists.communityId) !== data.communityId) {
-        throw new Error('El ID de la comunidad no coincide con el de la Wiki');
-      }
+
+    // --- NUEVO ESCUDO DE BLOQUEO ---
+    if (userExists.blockedUsers && userExists.blockedUsers.includes(data.authorId as any)) {
+      throw new Error('No puedes publicar en este muro porque el usuario te ha restringido.');
     }
+
+    const authorUser = await UserModel.findById(data.authorId);
+    if (authorUser && authorUser.blockedUsers && authorUser.blockedUsers.includes(data.targetId as any)) {
+      throw new Error('No puedes comentar en el muro de un usuario al que tienes bloqueado. Desbloquéalo primero.');
+    }
+    // -------------------------------
   }
 
   // 2. Si el comentario ocurre dentro de un universo, verificamos al miembro

@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { UserModel } from './user.model';
+import { AuthTokenModel } from './auth-token.model';
 import { config } from '../../config';
 import { CommunityModel } from '../communities/community.model';
 import { CommunityMemberModel } from '../community-members/community-member.model';
@@ -30,6 +32,27 @@ export const createUserService = async (userData: any) => {
     email: userData.email,
     passwordHash: hashedPassword,
   });
+
+  // ==========================================
+  // NUEVO: Generar token de verificación de email
+  // ==========================================
+  // Generamos un código numérico de 6 dígitos
+  const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // El código expirará en 24 horas
+  const expiresAt = new Date();
+  expiresAt.setHours(expiresAt.getHours() + 24);
+
+  await AuthTokenModel.create({
+    userId: newUser._id,
+    token: verificationCode,
+    type: 'email_verification',
+    expiresAt
+  });
+
+  // Aquí en el futuro conectarás SendGrid, AWS SES o Nodemailer.
+  // Por ahora lo imprimimos en consola para desarrollo.
+  console.log(`[MAILER SIMULATION] Enviar correo a ${newUser.email} con el código de verificación: ${verificationCode}`);
 
   return newUser;
 };
@@ -143,4 +166,123 @@ export const deleteUserAccountService = async (userId: string) => {
   ]);
 
   return { message: 'Tu cuenta de Legacy y todos tus datos personales han sido eliminados para siempre.' };
+};
+
+// ==========================================
+// SERVICIOS DE SEGURIDAD (SPRINT 1)
+// ==========================================
+
+export const verifyEmailService = async (email: string, token: string) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new Error('Usuario no encontrado');
+
+  if (user.isEmailVerified) throw new Error('El correo ya ha sido verificado');
+
+  const authToken = await AuthTokenModel.findOne({
+    userId: user._id,
+    token,
+    type: 'email_verification'
+  });
+
+  if (!authToken) throw new Error('Código de verificación inválido o expirado');
+
+  user.isEmailVerified = true;
+  await user.save();
+
+  // Borramos el token para que no se pueda reusar
+  await authToken.deleteOne();
+
+  return { message: 'Correo electrónico verificado exitosamente. Ya puedes acceder a todas las funciones de Legacy.' };
+};
+
+export const forgotPasswordService = async (email: string) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) {
+    // Por seguridad, no revelamos si el correo existe o no a un posible atacante
+    return { message: 'Si el correo está registrado, recibirás un código de recuperación pronto.' };
+  }
+
+  // Generamos un código de 6 dígitos
+  const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // Este token es crítico, expira en solo 15 minutos
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+  // Borramos cualquier token previo de recuperación para este usuario
+  await AuthTokenModel.deleteMany({ userId: user._id, type: 'password_reset' });
+
+  await AuthTokenModel.create({
+    userId: user._id,
+    token: resetToken,
+    type: 'password_reset',
+    expiresAt
+  });
+
+  console.log(`[MAILER SIMULATION] Enviar correo de recuperación a ${user.email} con el código: ${resetToken}`);
+
+  return { message: 'Si el correo está registrado, recibirás un código de recuperación pronto.' };
+};
+
+export const resetPasswordService = async (email: string, token: string, newPassword: string) => {
+  const user = await UserModel.findOne({ email });
+  if (!user) throw new Error('Usuario no encontrado');
+
+  const authToken = await AuthTokenModel.findOne({
+    userId: user._id,
+    token,
+    type: 'password_reset'
+  });
+
+  if (!authToken) throw new Error('Código de recuperación inválido o expirado');
+
+  // Encriptamos la nueva contraseña
+  const salt = await bcrypt.genSalt(12);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+  user.passwordHash = hashedPassword;
+  await user.save();
+
+  await authToken.deleteOne();
+
+  return { message: 'Tu contraseña ha sido actualizada exitosamente. Ya puedes iniciar sesión.' };
+};
+
+// ==========================================
+// SISTEMA DE BLOQUEO (SPRINT 1)
+// ==========================================
+
+export const blockUserService = async (userId: string, targetUserId: string) => {
+  if (userId === targetUserId) {
+    throw new Error('No puedes bloquearte a ti mismo.');
+  }
+
+  const user = await UserModel.findById(userId);
+  const targetUser = await UserModel.findById(targetUserId);
+
+  if (!user || !targetUser) {
+    throw new Error('Usuario no encontrado.');
+  }
+
+  // Verificamos si ya está bloqueado
+  if (user.blockedUsers && user.blockedUsers.includes(targetUser._id as any)) {
+    throw new Error('Este usuario ya se encuentra bloqueado.');
+  }
+
+  // Agregamos el ID al arreglo de bloqueados
+  user.blockedUsers.push(targetUser._id as any);
+  await user.save();
+
+  return { message: `Has bloqueado a ${targetUser.username}. Ya no podrá enviarte mensajes ni comentar en tu muro.` };
+};
+
+export const unblockUserService = async (userId: string, targetUserId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) throw new Error('Usuario no encontrado.');
+
+  // Filtramos el arreglo para remover el ID del usuario objetivo
+  user.blockedUsers = user.blockedUsers.filter(id => id.toString() !== targetUserId);
+  await user.save();
+
+  return { message: 'Usuario desbloqueado exitosamente.' };
 };
