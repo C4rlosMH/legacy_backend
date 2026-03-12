@@ -66,5 +66,6 @@ export const config = {
     minTreasuryToList: Number(process.env.COMMUNITY_MIN_TREASURY_TO_LIST),
     minStaffToList: Number(process.env.COMMUNITY_MIN_STAFF_TO_LIST),
     minWikisToList: Number(process.env.COMMUNITY_MIN_WIKIS_TO_LIST),
+    maxDisplayTitles: 5,
   },
 };

@@ -2,6 +2,9 @@ import { ChatModel } from './chat.model';
 import { MessageModel } from './messege.model';
 import { UserModel } from '../users/user.model';
 import { addMemberXPService } from '../community-members/community-member.service';
+import { CommunityMemberModel } from '../community-members/community-member.model';
+import { CommunityModel } from '../communities/community.model';
+import { config } from '../../config';
 
 // 1. Obtener o crear una sala de chat directo global
 export const getOrCreateGlobalDirectChatService = async (user1Id: string, user2Id: string) => {
@@ -108,4 +111,171 @@ export const getChatMessagesService = async (chatId: string, userId: string) => 
     .sort({ createdAt: 1 }); 
 
   return messages;
+};
+
+// ==========================================
+// CHATS DE COMUNIDAD (SPRINT 2)
+// ==========================================
+
+interface CreateGroupChatDTO {
+  name: string;
+  description?: string;
+  type: 'public_group' | 'private_group';
+  requiredTitleId?: string; // NUEVO: El ID del título que funcionará como candado
+}
+
+export const createCommunityChatService = async (communityId: string, creatorId: string, data: CreateGroupChatDTO) => {
+  const community = await CommunityModel.findById(communityId);
+  if (!community) throw new Error('La comunidad no existe.');
+
+  const member = await CommunityMemberModel.findOne({ communityId, userId: creatorId });
+  if (!member) throw new Error('Debes ser miembro de la comunidad para crear una sala de chat.');
+
+  const isStaff = ['owner', 'admin', 'moderator'].includes(member.role);
+
+  // REGLA 1: Configuración del universo (¿Solo staff puede crear chats?)
+  if (community.chatCreationMode === 'staff' && !isStaff) {
+    throw new Error('El Agente de este universo ha restringido la creación de chats únicamente al Staff.');
+  }
+
+  // REGLA 2: Barrera de Nivel (Si está permitido para todos)
+  if (!isStaff && member.level < config.permissions.minLevelToCreateChat) {
+    throw new Error(`Necesitas alcanzar el Nivel ${config.permissions.minLevelToCreateChat} para fundar una sala de chat pública.`);
+  }
+
+  const chatPayload: any = {
+    scope: 'community',
+    type: data.type,
+    communityId,
+    name: data.name,
+    description: data.description || '',
+    participants: [creatorId], 
+    admins: [creatorId]        
+  };
+
+  if (data.requiredTitleId) {
+    chatPayload.requiredTitleId = data.requiredTitleId;
+  }
+
+  const newChat = await ChatModel.create(chatPayload);
+
+  return newChat;
+};
+
+export const joinCommunityChatService = async (chatId: string, userId: string) => {
+  const chat = await ChatModel.findById(chatId);
+  if (!chat) throw new Error('La sala de chat no existe.');
+
+  if (chat.scope !== 'community') throw new Error('Esta no es una sala de comunidad.');
+  if (!chat.communityId) throw new Error('Error de integridad: La sala no tiene un ID de universo.');
+
+  const member = await CommunityMemberModel.findOne({ communityId: chat.communityId, userId });
+  if (!member) throw new Error('Debes unirte a la comunidad antes de entrar a sus salas.');
+
+  if (chat.participants.includes(userId as any)) {
+    throw new Error('Ya eres participante de esta sala.');
+  }
+
+  if (chat.type === 'private_group') {
+    throw new Error('Esta sala es privada. Debes ser invitado por un administrador de la sala.');
+  }
+
+  // REGLA 3: El Candado (Validación del Título Exclusivo)
+  if (chat.requiredTitleId) {
+    // Verificamos si el usuario tiene el ID de la llave en su inventario
+    const hasTitle = member.inventoryTitles && member.inventoryTitles.some(
+      id => id.toString() === chat.requiredTitleId?.toString()
+    );
+
+    // Los moderadores tienen "llave maestra" para vigilar todos los chats
+    const isStaff = ['owner', 'admin', 'moderator'].includes(member.role);
+
+    if (!hasTitle && !isStaff) {
+      throw new Error('Acceso denegado. No posees el título requerido para ingresar a esta sala exclusiva.');
+    }
+  }
+
+  chat.participants.push(userId as any);
+  await chat.save();
+
+  return { message: `Te has unido exitosamente a la sala: ${chat.name}` };
+};
+
+export const leaveCommunityChatService = async (chatId: string, userId: string) => {
+  const chat = await ChatModel.findById(chatId);
+  if (!chat) throw new Error('La sala de chat no existe.');
+
+  if (!chat.participants.includes(userId as any)) {
+    throw new Error('No eres participante de esta sala.');
+  }
+
+  // Lo removemos de la lista de participantes y de admins (si lo era)
+  chat.participants = chat.participants.filter(id => id.toString() !== userId);
+  if (chat.admins) {
+    chat.admins = chat.admins.filter(id => id.toString() !== userId);
+  }
+
+  // Si la sala se queda vacía, la eliminamos para no dejar "salas fantasma"
+  if (chat.participants.length === 0) {
+    await chat.deleteOne();
+    return { message: 'Has abandonado la sala. Al quedar vacía, ha sido eliminada del servidor.' };
+  }
+
+  await chat.save();
+  return { message: 'Has abandonado la sala exitosamente.' };
+};
+
+// ==========================================
+// PORTALES DE CHAT (ACCESOS DIRECTOS)
+// ==========================================
+
+export const linkCommunityChatsService = async (parentChatId: string, childChatId: string, userId: string) => {
+  if (parentChatId === childChatId) {
+    throw new Error('No puedes enlazar un chat consigo mismo.');
+  }
+
+  const parentChat = await ChatModel.findById(parentChatId);
+  const childChat = await ChatModel.findById(childChatId);
+
+  if (!parentChat || !childChat) {
+    throw new Error('Uno o ambos chats no existen.');
+  }
+
+  if (String(parentChat.communityId) !== String(childChat.communityId)) {
+    throw new Error('Los chats deben pertenecer a la misma comunidad para poder enlazarse.');
+  }
+  
+  if (!parentChat.communityId) {
+    throw new Error('Error de integridad: La sala principal no tiene un universo asignado.');
+  }
+
+  // Verificamos que el usuario sea administrador del chat "Padre"
+  const isAdmin = parentChat.admins && parentChat.admins.some(id => id.toString() === userId);
+  
+  if (!isAdmin) {
+    // Si no es admin directo de la sala, verificamos si es del Staff del universo
+    const isStaff = await CommunityMemberModel.findOne({
+      communityId: parentChat.communityId,
+      userId,
+      role: { $in: ['owner', 'admin', 'moderator'] }
+    });
+
+    if (!isStaff) {
+      throw new Error('Solo los administradores de la sala o el Staff pueden agregar accesos directos.');
+    }
+  }
+
+  // Inicializamos el arreglo si no existe
+  if (!parentChat.linkedChats) parentChat.linkedChats = [];
+
+  // Verificamos si ya está enlazado
+  if (parentChat.linkedChats.some(id => id.toString() === childChatId)) {
+    throw new Error('Este acceso directo ya existe en esta sala.');
+  }
+
+  // Agregamos el enlace
+  parentChat.linkedChats.push(childChatId as any);
+  await parentChat.save();
+
+  return { message: `Acceso directo a '${childChat.name}' agregado en la sala '${parentChat.name}'.` };
 };

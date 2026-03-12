@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createComment, deleteComment, getComments } from './comment.controller';
+import { createComment, deleteComment, getComments, updateComment } from './comment.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 
 const router = Router();
@@ -13,5 +13,9 @@ router.post('/', verifyToken, createComment);
 
 // Ruta: DELETE /api/v1/comments/:commentId
 router.delete('/:commentId', verifyToken, deleteComment);
+
+// Ruta: PUT /api/v1/comments/:commentId
+// Body esperado: { "content": "Nuevo texto corregido" }
+router.put('/:commentId', verifyToken, updateComment);
 
 export default router;

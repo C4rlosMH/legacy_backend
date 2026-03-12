@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createCommentService, deleteCommentService, getCommentsService } from './comment.service';
+import { createCommentService, deleteCommentService, getCommentsService, updateCommentService } from './comment.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 
 export const createComment = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -72,5 +72,27 @@ export const deleteComment = async (req: AuthRequest, res: Response): Promise<vo
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al eliminar el comentario' });
+  }
+};
+
+export const updateComment = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    const commentId = req.params.commentId as string;
+    const { content } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const updatedComment = await updateCommentService(commentId, userId, content);
+
+    res.status(200).json({
+      message: 'Comentario actualizado exitosamente',
+      comment: updatedComment
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al actualizar el comentario' });
   }
 };

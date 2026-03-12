@@ -11,6 +11,9 @@ export interface ICommunityMember extends Document {
   roleplayData?: Record<string, any>;
   isHidden: boolean; // Bandera de moderación
 
+  inventoryTitles: mongoose.Types.ObjectId[]; // Todos los títulos que posee
+  displayTitles: mongoose.Types.ObjectId[];   // Los que elige mostrar en su perfil (Ej. máximo 3)
+
   level: number;
   experience: number;
   lastCheckIn?: Date;
@@ -57,6 +60,8 @@ const CommunityMemberSchema: Schema = new Schema(
       type: Number, 
       default: 0 
     },
+    inventoryTitles: [{ type: Schema.Types.ObjectId, ref: 'CommunityTitle' }],
+    displayTitles: [{ type: Schema.Types.ObjectId, ref: 'CommunityTitle' }],
   },
   { timestamps: true }
 );

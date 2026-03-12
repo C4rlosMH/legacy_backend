@@ -155,3 +155,26 @@ export const deleteCommentService = async (commentId: string, userId: string) =>
   return { message: 'Comentario eliminado exitosamente' };
 };
 
+// NUEVA FUNCIÓN: Editar un comentario existente
+export const updateCommentService = async (commentId: string, userId: string, content: string) => {
+  const comment = await CommentModel.findById(commentId);
+
+  if (!comment) {
+    throw new Error('El comentario no existe');
+  }
+
+  // Regla estricta: Ni siquiera el staff puede editar las palabras de otra persona
+  if (comment.authorId.toString() !== userId) {
+    throw new Error('No tienes permiso para editar este comentario. Solo el autor original puede hacerlo.');
+  }
+
+  if (!content || content.trim().length === 0) {
+    throw new Error('El contenido del comentario no puede estar vacío');
+  }
+
+  // Opcional: Podrías agregar una bandera "isEdited: true" en el modelo en el futuro
+  comment.content = content;
+  await comment.save();
+
+  return comment;
+};

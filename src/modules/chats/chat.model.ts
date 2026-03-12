@@ -13,6 +13,8 @@ export interface IChat extends Document {
   // NUEVOS CAMPOS PARA SOLICITUDES
   status: "pending" | "accepted" | "rejected";
   initiatorId?: mongoose.Types.ObjectId;
+  requiredTitleId?: mongoose.Types.ObjectId; // El ID del título llave
+  linkedChats?: mongoose.Types.ObjectId[];
 
   createdAt: Date;
   updatedAt: Date;
@@ -32,6 +34,8 @@ const ChatSchema: Schema = new Schema(
     participants: [{ type: Schema.Types.ObjectId, ref: "User" }],
     admins: [{ type: Schema.Types.ObjectId, ref: "User" }],
     lastMessage: { type: Schema.Types.ObjectId, ref: "Message" },
+    requiredTitleId: { type: Schema.Types.ObjectId, ref: 'CommunityTitle', default: null },
+    linkedChats: [{ type: Schema.Types.ObjectId, ref: "Chat" }],
 
     // CONFIGURACIÓN DE LOS NUEVOS CAMPOS
     status: {

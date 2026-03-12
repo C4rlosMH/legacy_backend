@@ -14,6 +14,7 @@ import notificationRoutes from './modules/notifications/notification.routes';
 import likeRoutes from './modules/likes/like.routes';
 import economyRoutes from './modules/economy/economy.routes'
 import insurrectionRoutes from './modules/governance/insurrection.routes';
+import communityTitleRoutes from './modules/community-titles/community-title.routes';
 
 const app: Application = express();
 
@@ -35,5 +36,6 @@ app.use(`${apiPrefix}/wikis`, wikiRoutes);
 app.use(`${apiPrefix}/likes`, likeRoutes);
 app.use(`${apiPrefix}/economy`, economyRoutes);
 app.use(`${apiPrefix}/governance/insurrections`, insurrectionRoutes);
+app.use(`${apiPrefix}/community-titles`, communityTitleRoutes);
 
 export default app;

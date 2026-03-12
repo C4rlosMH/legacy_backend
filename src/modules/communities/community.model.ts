@@ -18,6 +18,8 @@ export interface ICommunity extends Document {
   // NUEVO: Protocolo Anti-Zombie
   systemStatus: 'active' | 'warned' | 'zombie';
   systemWarningDate?: Date | undefined;
+
+  chatCreationMode: 'all' | 'staff'
   
   createdAt: Date;
   updatedAt: Date;
@@ -75,7 +77,12 @@ const CommunitySchema: Schema = new Schema(
       enum: ['active', 'warned', 'zombie'],
       default: 'active'
     },
-    systemWarningDate: { type: Date }
+    systemWarningDate: { type: Date },
+    chatCreationMode: {
+      type: String,
+      enum: ['all', 'staff'],
+      default: 'all'
+    },
   },
   { timestamps: true }
 );
