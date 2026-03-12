@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { 
   joinCommunity, leaveCommunity, getUserCommunities, updateCommunityProfile, 
-  updateMemberRole, toggleHideProfile, kickMember, getPendingRequests, processJoinRequest,
+  updateMemberRole, toggleHideProfile, kickMember, getPendingRequests, processJoinRequest, unbanMember,
+  issueStrike,
 } from './community-member.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
@@ -55,5 +56,15 @@ router.delete('/:communityId/kick/:targetUserId', verifyToken,
 // Salir de la comunidad
 // Ruta: DELETE /api/v1/community-members/:communityId/leave
 router.delete('/:communityId/leave', verifyToken, leaveCommunity);
+
+router.put('/:communityId/unban/:targetUserId', verifyToken,
+  requireCommunityRole(['owner', 'admin']), // Curadores NO pueden desbanear
+  unbanMember
+);
+
+router.post('/:communityId/strike/:targetUserId', verifyToken,
+  requireCommunityRole(['owner', 'admin', 'moderator']), 
+  issueStrike
+);
 
 export default router;

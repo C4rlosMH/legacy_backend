@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import {
   getOrCreateGlobalDirectChat, sendMessage, getUserChats, getChatMessages, createCommunityChat, joinCommunityChat,
-  leaveCommunityChat, linkCommunityChats,
+  leaveCommunityChat, linkCommunityChats, deleteMessage,
 } from './chat.controller';
 
 const router = Router();
@@ -41,5 +41,9 @@ router.delete('/:chatId/leave', verifyToken, leaveCommunityChat);
 // POST /api/v1/chats/:chatId/link
 // Body esperado: { "childChatId": "ID_DEL_CHAT_DESTINO" }
 router.post('/:chatId/link', verifyToken, linkCommunityChats);
+
+// Eliminar un mensaje de una sala (Autor, Admin de Sala o Staff)
+// DELETE /api/v1/chats/:chatId/messages/:messageId
+router.delete('/:chatId/messages/:messageId', verifyToken, deleteMessage);
 
 export default router;

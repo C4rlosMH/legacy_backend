@@ -13,6 +13,8 @@ export interface IUser extends Document {
   // ROL GLOBAL (Agregado para el Sistema)
   // ==========================================
   globalRole: "user" | "system";
+  accountStatus: 'active' | 'suspended' | 'banned';
+  banReason?: string | undefined;
 
   // ==========================================
   // NUEVOS CAMPOS: Economía, Membresía y Age Gate
@@ -81,6 +83,12 @@ const UserSchema: Schema = new Schema(
       enum: ["user", "system"],
       default: "user",
     },
+    accountStatus: {
+      type: String,
+      enum: ['active', 'suspended', 'banned'],
+      default: 'active'
+    },
+    banReason: { type: String, maxlength: 300 },
 
     // ==========================================
     // CAMPOS DE ECONOMÍA Y LEGACY+

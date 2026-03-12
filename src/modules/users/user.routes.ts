@@ -1,8 +1,10 @@
 import { Router } from 'express';
 import { registerUser, loginUser, getUserProfile, updateGlobalProfile, blockUser,
     deleteUserAccount, verifyEmail, resetPassword, forgotPassword, unblockUser,
+    banGlobalUser, unbanGlobalUser,
  } from './user.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
+import { requireGlobalRole } from '../../middlewares/global-role.middleware';
 
 const router = Router();
 
@@ -29,5 +31,10 @@ router.delete('/account', verifyToken, deleteUserAccount);
 // Ruta para ver el perfil global de alguien más (Pública)
 // GET /api/v1/users/:username
 router.get('/:username', getUserProfile);
+
+// Rutas de Moderación Global (Solo cuentas 'system' / Sentinel)
+router.post('/global-ban/:targetUserId', verifyToken, requireGlobalRole(['system']), banGlobalUser);
+
+router.post('/global-unban/:targetUserId', verifyToken, requireGlobalRole(['system']), unbanGlobalUser);
 
 export default router;

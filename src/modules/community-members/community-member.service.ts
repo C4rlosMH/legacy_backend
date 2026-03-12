@@ -3,6 +3,7 @@ import { CommunityMemberModel } from './community-member.model';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
 import { CommunityRequestModel } from './community-request.model';
 import { getLevelFromXP } from '../../utils/level.util';
+import { createModLogService } from '../moderation/mod-log.service';
 
 interface JoinCommunityDTO {
   userId: string;
@@ -23,12 +24,46 @@ export const joinCommunityService = async (data: JoinCommunityDTO) => {
   });
 
   if (existingMember) {
-    throw new Error('Ya eres miembro de esta comunidad');
+    if (existingMember.status === 'active') {
+      throw new Error('Ya eres miembro de esta comunidad');
+    }
+    if (existingMember.status === 'banned') {
+      throw new Error('Has sido vetado de este universo y no puedes volver a unirte.');
+    }
+
+    // Si el estado es 'left', el usuario está regresando por voluntad propia
+    if (existingMember.status === 'left') {
+      if (community.visibility === 'private') {
+        const pendingRequest = await CommunityRequestModel.findOne({
+          userId: data.userId,
+          communityId: data.communityId,
+          status: 'pending'
+        });
+
+        if (pendingRequest) throw new Error('Ya tienes una solicitud pendiente para entrar a esta comunidad');
+
+        const newRequest = await CommunityRequestModel.create({
+          userId: data.userId,
+          communityId: data.communityId,
+          nickname: data.nickname,
+          message: data.message || '',
+          status: 'pending'
+        });
+
+        return { type: 'request', data: newRequest, message: 'Solicitud enviada al staff para su revisión' };
+      }
+
+      // Si es pública, lo reactivamos instantáneamente
+      existingMember.status = 'active';
+      existingMember.nickname = data.nickname;
+      await existingMember.save();
+
+      return { type: 'member', data: existingMember, message: 'Bienvenido de vuelta. Has recuperado todo tu progreso en la comunidad.' };
+    }
   }
 
-  // LÓGICA DE PRIVACIDAD
+  // LÓGICA DE PRIVACIDAD PARA USUARIOS NUEVOS
   if (community.visibility === 'private') {
-    // Verificamos si ya tiene una solicitud pendiente
     const pendingRequest = await CommunityRequestModel.findOne({
       userId: data.userId,
       communityId: data.communityId,
@@ -39,7 +74,6 @@ export const joinCommunityService = async (data: JoinCommunityDTO) => {
       throw new Error('Ya tienes una solicitud pendiente para entrar a esta comunidad');
     }
 
-    // Creamos la solicitud en lugar del perfil de miembro
     const newRequest = await CommunityRequestModel.create({
       userId: data.userId,
       communityId: data.communityId,
@@ -51,7 +85,6 @@ export const joinCommunityService = async (data: JoinCommunityDTO) => {
     return { type: 'request', data: newRequest, message: 'Solicitud enviada al staff para su revisión' };
   }
 
-  // Si es pública o no listada, entra directo
   const newMember = await CommunityMemberModel.create({
     userId: data.userId,
     communityId: data.communityId,
@@ -98,7 +131,7 @@ export const processJoinRequestService = async (requestId: string, communityId: 
 };
 
 export const getUserCommunitiesService = async (userId: string) => {
-  const memberships = await CommunityMemberModel.find({ userId })
+  const memberships = await CommunityMemberModel.find({ userId, status: 'active' }) // <-- SOLO ACTIVOS
     .populate('communityId', 'name description avatar banner')
     .sort({ createdAt: -1 }); 
 
@@ -159,41 +192,126 @@ export const updateMemberRoleService = async (
 
 // --- FUNCIONES DE MODERACIÓN DE USUARIOS ---
 
-export const toggleHideProfileService = async (communityId: string, targetUserId: string, hide: boolean) => {
+export const toggleHideProfileService = async (
+  communityId: string, 
+  targetUserId: string, 
+  moderatorId: string, 
+  hide: boolean,
+  hours?: number // <-- Opcional: El staff decide cuánto dura el castigo
+) => {
   const member = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
   if (!member) throw new Error('El usuario no es miembro de la comunidad');
-  
   if (member.role === 'owner') throw new Error('No puedes ocultar el perfil del creador');
 
   member.isHidden = hide;
+  let reasonMsg = `Perfil ${hide ? 'ocultado (Modo Lectura)' : 'restaurado'} manualmente.`;
+
+  if (hide && hours) {
+    const muteEnd = new Date();
+    muteEnd.setHours(muteEnd.getHours() + hours);
+    member.hiddenUntil = muteEnd;
+    reasonMsg += ` Duración: ${hours} horas.`;
+  } else if (!hide) {
+    // Si el staff decide quitarle el castigo antes de tiempo, limpiamos la fecha
+    member.hiddenUntil = undefined; 
+  }
+
   await member.save();
+
+  // Dejamos el rastro en el historial
+  await createModLogService({
+    communityId,
+    moderatorId,
+    action: 'hide_profile',
+    targetUserId,
+    reason: reasonMsg
+  });
+
   return member;
 };
 
-export const kickMemberService = async (communityId: string, targetUserId: string) => {
+export const kickMemberService = async (communityId: string, targetUserId: string, moderatorId: string, reason?: string) => {
   const member = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
   if (!member) throw new Error('El usuario no es miembro de la comunidad');
   
+  if (member.status === 'banned') throw new Error('El usuario ya está vetado de la comunidad');
   if (member.role === 'owner') throw new Error('No puedes expulsar al creador');
   if (member.role === 'admin') throw new Error('Los líderes no pueden ser expulsados, deben ser degradados primero');
 
-  await CommunityMemberModel.findByIdAndDelete(member._id);
-  return { message: 'Usuario expulsado de la comunidad' };
+  member.status = 'banned';
+  await member.save();
+
+  // Dejar rastro en el Mod Log
+  await createModLogService({
+    communityId,
+    moderatorId,
+    action: 'ban',
+    targetUserId,
+    reason: reason || 'Violación a las normas de la comunidad'
+  });
+
+  return { message: 'Usuario vetado de la comunidad exitosamente.' };
 };
 
 export const leaveCommunityService = async (communityId: string, userId: string) => {
-  const member = await CommunityMemberModel.findOne({ communityId, userId });
+  const member = await CommunityMemberModel.findOne({ communityId, userId, status: 'active' });
   
   if (!member) {
-    throw new Error('No eres miembro de esta comunidad');
+    throw new Error('No eres miembro activo de esta comunidad');
   }
 
   if (member.role === 'owner') {
     throw new Error('El creador no puede abandonar la comunidad. Debes transferir el liderazgo o eliminarla por completo.');
   }
 
-  await member.deleteOne();
-  return { message: 'Has abandonado la comunidad exitosamente' };
+  member.status = 'left';
+  await member.save();
+  return { message: 'Has abandonado la comunidad exitosamente. Tu progreso ha sido guardado por si decides volver.' };
+};
+
+export const unbanMemberService = async (communityId: string, targetUserId: string, moderatorId: string) => {
+  const member = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
+  
+  if (!member) throw new Error('Registro de usuario no encontrado en esta comunidad');
+  if (member.status !== 'banned') throw new Error('Este usuario no se encuentra vetado');
+
+  member.status = 'active';
+  await member.save();
+  
+  // Dejar rastro en el Mod Log
+  await createModLogService({
+    communityId,
+    moderatorId,
+    action: 'unban',
+    targetUserId,
+    reason: 'Sanción levantada por el equipo de moderación'
+  });
+  
+  return { message: 'El usuario ha sido desbaneado y reincorporado a la comunidad con todo su progreso intacto.' };
+};
+
+export const issueStrikeService = async (communityId: string, targetUserId: string, moderatorId: string, reason: string) => {
+  const member = await CommunityMemberModel.findOne({ userId: targetUserId, communityId });
+  
+  if (!member) throw new Error('El usuario no es miembro de la comunidad');
+  if (['owner', 'admin'].includes(member.role)) throw new Error('No puedes sancionar a un líder');
+
+  member.strikeCount += 1;
+  await member.save();
+
+  // Registro para auditoría del staff
+  await createModLogService({
+    communityId,
+    moderatorId,
+    action: 'strike',
+    targetUserId,
+    reason: `Falta #${member.strikeCount}: ${reason}`
+  });
+
+  return { 
+    message: `Falta registrada exitosamente. El usuario ahora acumula ${member.strikeCount} advertencia(s).`, 
+    strikeCount: member.strikeCount 
+  };
 };
 
 export const communityCheckInService = async (userId: string, communityId: string) => {
@@ -251,3 +369,4 @@ export const addMemberXPService = async (userId: string, communityId: string, am
 
   await member.save();
 };
+

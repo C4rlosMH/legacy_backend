@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService, 
   updateMemberRoleService, toggleHideProfileService, kickMemberService, leaveCommunityService,
-  getPendingRequestsService, processJoinRequestService,
+  getPendingRequestsService, processJoinRequestService, unbanMemberService, issueStrikeService,
 } from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
@@ -148,17 +148,18 @@ export const updateMemberRole = async (req: AuthRequest, res: Response): Promise
 
 export const toggleHideProfile = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Forzamos el tipado a string individualmente
+    const moderatorId = req.user?.id;
     const communityId = req.params.communityId as string;
     const targetUserId = req.params.targetUserId as string;
-    const { hide } = req.body; 
+    const { hide, hours } = req.body; 
 
+    if (!moderatorId) { res.status(401).json({ message: 'No autenticado' }); return; }
     if (typeof hide !== 'boolean') {
       res.status(400).json({ message: 'El campo hide debe ser un booleano (true o false)' });
       return;
     }
 
-    const member = await toggleHideProfileService(communityId, targetUserId, hide);
+    const member = await toggleHideProfileService(communityId, targetUserId, moderatorId, hide, hours);
     res.status(200).json({ message: `Perfil ${hide ? 'ocultado' : 'visible'} con éxito`, member });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al actualizar la visibilidad del perfil' });
@@ -167,11 +168,14 @@ export const toggleHideProfile = async (req: AuthRequest, res: Response): Promis
 
 export const kickMember = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    // Forzamos el tipado a string individualmente
+    const moderatorId = req.user?.id;
     const communityId = req.params.communityId as string;
     const targetUserId = req.params.targetUserId as string;
+    const { reason } = req.body; // El mod puede enviar una razón opcional
     
-    const result = await kickMemberService(communityId, targetUserId);
+    if (!moderatorId) { res.status(401).json({ message: 'No autenticado' }); return; }
+
+    const result = await kickMemberService(communityId, targetUserId, moderatorId, reason);
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al expulsar al usuario' });
@@ -192,5 +196,37 @@ export const leaveCommunity = async (req: AuthRequest, res: Response): Promise<v
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al abandonar la comunidad' });
+  }
+};
+
+export const unbanMember = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const moderatorId = req.user?.id;
+    const communityId = req.params.communityId as string;
+    const targetUserId = req.params.targetUserId as string;
+    
+    if (!moderatorId) { res.status(401).json({ message: 'No autenticado' }); return; }
+
+    const result = await unbanMemberService(communityId, targetUserId, moderatorId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al remover el veto del usuario' });
+  }
+};
+
+export const issueStrike = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const moderatorId = req.user?.id;
+    const communityId = req.params.communityId as string;
+    const targetUserId = req.params.targetUserId as string;
+    const { reason } = req.body;
+
+    if (!moderatorId) { res.status(401).json({ message: 'No autenticado' }); return; }
+    if (!reason) { res.status(400).json({ message: 'Debes proporcionar un motivo para la advertencia.' }); return; }
+
+    const result = await issueStrikeService(communityId, targetUserId, moderatorId, reason);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al aplicar la falta' });
   }
 };

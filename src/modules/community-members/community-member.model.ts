@@ -5,14 +5,19 @@ export interface ICommunityMember extends Document {
   userId: mongoose.Types.ObjectId;
   communityId: mongoose.Types.ObjectId;
   nickname: string;
-  avatar?: string; // Agregado para el perfil local
-  bio?: string;    // Agregado para el perfil local
+  avatar?: string; 
+  bio?: string;    
   role: 'system' | 'owner' | 'admin' | 'moderator' | 'member';
   roleplayData?: Record<string, any>;
-  isHidden: boolean; // Bandera de moderación
+  
+  // MODERACIÓN Y ESTADOS (SPRINT 3)
+  isHidden: boolean; 
+  hiddenUntil?: Date | undefined; // Para el Modo Lectura (Mute temporal)
+  status: 'active' | 'banned' | 'left'; // Soft Delete y Baneos
+  strikeCount: number; // Contador de faltas/advertencias
 
-  inventoryTitles: mongoose.Types.ObjectId[]; // Todos los títulos que posee
-  displayTitles: mongoose.Types.ObjectId[];   // Los que elige mostrar en su perfil (Ej. máximo 3)
+  inventoryTitles: mongoose.Types.ObjectId[]; 
+  displayTitles: mongoose.Types.ObjectId[];   
 
   level: number;
   experience: number;
@@ -43,23 +48,30 @@ const CommunityMemberSchema: Schema = new Schema(
       type: Schema.Types.Mixed, 
       default: {}
     },
-    isHidden: { type: Boolean, default: false }, // Bandera para que los curadores oculten perfiles
+    // MODERACIÓN
+    isHidden: { type: Boolean, default: false }, 
+    hiddenUntil: { type: Date },
+    status: {
+      type: String,
+      enum: ['active', 'banned', 'left'],
+      default: 'active'
+    },
+    strikeCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    // GAMIFICACIÓN
     level: { 
       type: Number, 
       default: 1, 
       min: 1, 
-      max: config.gamification.maxLevel // <--- AHORA ES DINÁMICO
+      max: config.gamification.maxLevel 
     },
-    experience: { 
-      type: Number, 
-      default: 0, 
-      min: 0 
-    },
+    experience: { type: Number, default: 0, min: 0 },
     lastCheckIn: { type: Date },
-    checkInStreak: { 
-      type: Number, 
-      default: 0 
-    },
+    checkInStreak: { type: Number, default: 0 },
+    
     inventoryTitles: [{ type: Schema.Types.ObjectId, ref: 'CommunityTitle' }],
     displayTitles: [{ type: Schema.Types.ObjectId, ref: 'CommunityTitle' }],
   },
@@ -67,5 +79,7 @@ const CommunityMemberSchema: Schema = new Schema(
 );
 
 CommunityMemberSchema.index({ userId: 1, communityId: 1 }, { unique: true });
+// Nuevo índice para buscar baneados o activos rápidamente
+CommunityMemberSchema.index({ communityId: 1, status: 1 }); 
 
 export const CommunityMemberModel = mongoose.model<ICommunityMember>('CommunityMember', CommunityMemberSchema);

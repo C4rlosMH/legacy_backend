@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { 
   createUserService, loginUserService, getUserProfileService, forgotPasswordService,
   updateGlobalProfileService, deleteUserAccountService, resetPasswordService, verifyEmailService,
-  blockUserService, unblockUserService,
+  blockUserService, unblockUserService, banGlobalUserService, unbanGlobalUserService,
 } from './user.service';
 import { config } from '../../config'; 
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -191,5 +191,35 @@ export const unblockUser = async (req: AuthRequest, res: Response): Promise<void
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al desbloquear al usuario' });
+  }
+};
+
+export const banGlobalUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const adminId = req.user?.id;
+    const targetUserId = req.params.targetUserId as string;
+    const { reason } = req.body;
+
+    if (!adminId) { res.status(401).json({ message: 'No autenticado' }); return; }
+    if (!reason) { res.status(400).json({ message: 'Debe proveer una razón para el baneo global' }); return; }
+
+    const result = await banGlobalUserService(adminId, targetUserId, reason);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(403).json({ message: error.message || 'Error al ejecutar el baneo global' });
+  }
+};
+
+export const unbanGlobalUser = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const adminId = req.user?.id;
+    const targetUserId = req.params.targetUserId as string;
+
+    if (!adminId) { res.status(401).json({ message: 'No autenticado' }); return; }
+
+    const result = await unbanGlobalUserService(adminId, targetUserId);
+    res.status(200).json(result);
+  } catch (error: any) {
+    res.status(403).json({ message: error.message || 'Error al revertir el baneo global' });
   }
 };

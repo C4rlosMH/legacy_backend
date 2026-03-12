@@ -286,3 +286,45 @@ export const unblockUserService = async (userId: string, targetUserId: string) =
 
   return { message: 'Usuario desbloqueado exitosamente.' };
 };
+
+// ==========================================
+// MODERACIÓN GLOBAL (TEAM LEGACY / SENTINEL)
+// ==========================================
+
+export const banGlobalUserService = async (adminId: string, targetUserId: string, reason: string) => {
+  const admin = await UserModel.findById(adminId);
+  if (!admin || admin.globalRole !== 'system') {
+    throw new Error('No tienes autorización de nivel Sistema para ejecutar esta acción.');
+  }
+
+  const targetUser = await UserModel.findById(targetUserId);
+  if (!targetUser) throw new Error('El usuario objetivo no existe.');
+
+  if (targetUser.globalRole === 'system') {
+    throw new Error('Protocolo denegado: No se puede suspender una cuenta del sistema.');
+  }
+
+  targetUser.accountStatus = 'banned';
+  targetUser.banReason = reason;
+  await targetUser.save();
+
+  // Opcional en el futuro: Aquí podrías disparar un email al usuario informando de su baneo.
+
+  return { message: `La cuenta de ${targetUser.username} ha sido suspendida permanentemente de Legacy.` };
+};
+
+export const unbanGlobalUserService = async (adminId: string, targetUserId: string) => {
+  const admin = await UserModel.findById(adminId);
+  if (!admin || admin.globalRole !== 'system') {
+    throw new Error('No tienes autorización de nivel Sistema para ejecutar esta acción.');
+  }
+
+  const targetUser = await UserModel.findById(targetUserId);
+  if (!targetUser) throw new Error('El usuario objetivo no existe.');
+
+  targetUser.accountStatus = 'active';
+  targetUser.banReason = undefined;
+  await targetUser.save();
+
+  return { message: `La cuenta de ${targetUser.username} ha sido restaurada.` };
+};

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { UserModel } from '../modules/users/user.model';
 import { config } from '../config';
 
 // 1. Extendemos la interfaz Request para que TypeScript acepte req.user
@@ -11,25 +12,39 @@ export interface AuthRequest extends Request {
 }
 
 // 2. Creamos el middleware
-export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      res.status(401).json({ message: 'Acceso denegado. Token no proporcionado o formato inválido.' });
+      res.status(401).json({ message: 'Acceso denegado. Token no proporcionado.' });
       return;
     }
 
     const token = authHeader.split(' ')[1];
 
-    // Nueva validación: Nos aseguramos de que el token exista y no sea undefined
     if (!token) {
       res.status(401).json({ message: 'Acceso denegado. El token está vacío.' });
       return;
     }
 
-    // Al haber pasado el if anterior, TypeScript ya sabe que 'token' es 100% un string
     const decoded = jwt.verify(token, config.security.jwtSecret as string) as jwt.JwtPayload;
+
+    // VERIFICACIÓN DE BANEO GLOBAL
+    // Usamos lean() y select() para que la consulta a la BD sea extremadamente rápida
+    const userStatus = await UserModel.findById(decoded.id).select('accountStatus').lean();
+
+    if (!userStatus) {
+      res.status(401).json({ message: 'La cuenta asociada a este token ya no existe.' });
+      return;
+    }
+
+    if (userStatus.accountStatus === 'banned') {
+      res.status(403).json({ 
+        message: 'ACCESO DENEGADO: Tu cuenta de Legacy ha sido suspendida permanentemente por violar los Términos de Servicio.' 
+      });
+      return;
+    }
 
     req.user = { id: decoded.id as string };
 

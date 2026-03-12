@@ -15,6 +15,7 @@ import likeRoutes from './modules/likes/like.routes';
 import economyRoutes from './modules/economy/economy.routes'
 import insurrectionRoutes from './modules/governance/insurrection.routes';
 import communityTitleRoutes from './modules/community-titles/community-title.routes';
+import moderationRoutes from './modules/moderation/moderation.routes'
 
 const app: Application = express();
 
@@ -37,5 +38,6 @@ app.use(`${apiPrefix}/likes`, likeRoutes);
 app.use(`${apiPrefix}/economy`, economyRoutes);
 app.use(`${apiPrefix}/governance/insurrections`, insurrectionRoutes);
 app.use(`${apiPrefix}/community-titles`, communityTitleRoutes);
+app.use('${apiPrefix}/moderation', moderationRoutes);
 
 export default app;

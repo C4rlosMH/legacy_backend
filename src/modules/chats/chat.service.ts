@@ -5,6 +5,7 @@ import { addMemberXPService } from '../community-members/community-member.servic
 import { CommunityMemberModel } from '../community-members/community-member.model';
 import { CommunityModel } from '../communities/community.model';
 import { config } from '../../config';
+import { createModLogService } from '../moderation/mod-log.service';
 
 // 1. Obtener o crear una sala de chat directo global
 export const getOrCreateGlobalDirectChatService = async (user1Id: string, user2Id: string) => {
@@ -278,4 +279,64 @@ export const linkCommunityChatsService = async (parentChatId: string, childChatI
   await parentChat.save();
 
   return { message: `Acceso directo a '${childChat.name}' agregado en la sala '${parentChat.name}'.` };
+};
+
+export const deleteMessageService = async (chatId: string, messageId: string, userId: string) => {
+  const chat = await ChatModel.findById(chatId);
+  if (!chat) throw new Error('La sala de chat no existe');
+
+  const message = await MessageModel.findOne({ _id: messageId, chatId });
+  if (!message) throw new Error('El mensaje no existe en esta sala');
+
+  let hasPermission = false;
+  let isStaffAction = false;
+
+  // 1. El autor original siempre puede borrar su propio mensaje
+  if (message.senderId.toString() === userId) {
+    hasPermission = true;
+  }
+  // 2. Los administradores específicos de la sala pueden borrarlo
+  else if (chat.admins && chat.admins.some(id => id.toString() === userId)) {
+    hasPermission = true;
+    isStaffAction = true;
+  }
+  // 3. Si es un chat de comunidad, el staff global del universo puede borrarlo
+  else if (chat.scope === 'community' && chat.communityId) {
+    const member = await CommunityMemberModel.findOne({
+      communityId: chat.communityId,
+      userId,
+      role: { $in: ['owner', 'admin', 'moderator'] }
+    });
+    
+    if (member) {
+      hasPermission = true;
+      isStaffAction = true;
+    }
+  }
+
+  if (!hasPermission) {
+    throw new Error('No tienes permisos para eliminar este mensaje.');
+  }
+
+  await message.deleteOne();
+
+  // Si fue una acción de moderación en un chat de comunidad, dejamos registro
+  if (isStaffAction && chat.scope === 'community' && chat.communityId) {
+    await createModLogService({
+      communityId: chat.communityId.toString(),
+      moderatorId: userId,
+      action: 'delete_message',
+      targetUserId: message.senderId.toString(),
+      reason: `Mensaje eliminado por moderación en la sala: ${chat.name || 'Chat Privado'}`
+    });
+  }
+
+  // Mantenimiento: Si borramos el último mensaje visible en la bandeja, actualizamos la sala
+  if (chat.lastMessage?.toString() === messageId) {
+    const previousMessage = await MessageModel.findOne({ chatId }).sort({ createdAt: -1 });
+    chat.lastMessage = previousMessage ? previousMessage._id as any : null;
+    await chat.save();
+  }
+
+  return { message: 'Mensaje eliminado exitosamente' };
 };

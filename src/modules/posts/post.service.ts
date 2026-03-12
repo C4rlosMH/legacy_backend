@@ -45,6 +45,10 @@ export const createPostService = async (data: CreatePostDTO) => {
       throw new Error('No puedes publicar aquí porque no eres miembro de esta comunidad');
     }
 
+    if (memberProfile.hiddenUntil && new Date(memberProfile.hiddenUntil) > new Date()) {
+      throw new Error(`Estás en Modo Lectura por infracciones. Podrás volver a publicar el ${new Date(memberProfile.hiddenUntil).toLocaleString()}`);
+    }
+
     authorMemberId = memberProfile._id;
   }
 
