@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { AuthRequest } from '../../middlewares/auth.middleware';
+import { Server } from 'socket.io';
 import {
   getOrCreateGlobalDirectChatService, sendMessageService, getUserChatsService, getChatMessagesService,
   createCommunityChatService, joinCommunityChatService, leaveCommunityChatService, linkCommunityChatsService,
@@ -41,7 +42,13 @@ export const sendMessage = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
+    // 1. Guardamos el mensaje en la base de datos (tu lógica actual)
     const message = await sendMessageService(chatId, senderId, content);
+
+    // 2. TIEMPO REAL: Extraemos la instancia de Socket.io y emitimos el mensaje a la sala
+    const io: Server = req.app.get('io');
+    io.to(chatId).emit('new_message', message);
+
     res.status(201).json({ message: 'Mensaje enviado', data: message });
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al enviar el mensaje' });

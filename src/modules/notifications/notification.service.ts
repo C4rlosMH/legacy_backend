@@ -1,4 +1,6 @@
 import { NotificationModel } from './notification.model';
+import app from '../../app'
+import {Server} from 'socket.io'
 
 interface CreateNotificationDTO {
   recipientId: string;
@@ -31,6 +33,17 @@ export const createNotificationService = async (data: CreateNotificationDTO) => 
 
   // 3. Creamos el documento con el payload limpio
   const notification = await NotificationModel.create(payload);
+
+  // 4. TIEMPO REAL: Emitimos la notificación a la sala personal del usuario
+  try {
+    const io: Server = app.get('io');
+    if (io) {
+      // Emitimos al canal que tiene el mismo nombre que el recipientId
+      io.to(data.recipientId.toString()).emit('new_notification', notification);
+    }
+  } catch (error) {
+    console.error('[SOCKET] Error al emitir la notificación en tiempo real:', error);
+  }
 
   return notification;
 };
