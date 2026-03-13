@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 const SERVER_URL = 'http://localhost:2700';
 
 // Pon aquí el ID real de un usuario de tu base de datos
-const TEST_USER_ID = '60d5ecb8b392d700153ef123'; 
+const TEST_USER_ID = '000000000000000000000'; 
 
 console.log('Iniciando escucha de la Campana Global de Notificaciones...');
 

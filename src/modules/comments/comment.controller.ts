@@ -11,11 +11,6 @@ export const createComment = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    if (targetType !== 'post' && targetType !== 'user_wall') {
-      res.status(400).json({ message: 'El tipo de objetivo no es válido' });
-      return;
-    }
-
     const newComment = await createCommentService({
       targetType,
       targetId,
