@@ -10,6 +10,17 @@ export const requireLevel = (minLevel: number) => {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user?.id;
+      
+      // Extraemos el contexto (puede venir en el body al crear, o en query al buscar)
+      const context = req.body.context || req.query.context;
+
+      // CORRECCIÓN: Si el usuario está publicando en el Global (Threads), 
+      // ignoramos la barrera de nivel, ya que los niveles son solo para los universos.
+      if (context === 'global_thread') {
+        next();
+        return;
+      }
+
       // El communityId puede venir en params (rutas de mundo) o en body (creación de posts)
       const communityId = req.params.communityId || req.body.communityId;
 
