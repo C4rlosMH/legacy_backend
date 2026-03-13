@@ -1,17 +1,18 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IReport extends Document {
-  communityId: mongoose.Types.ObjectId;
-  reporterId: mongoose.Types.ObjectId; // Quién hace la denuncia
+  scope: 'global' | 'community'; // <-- NUEVO: Define quién debe atender esto
+  communityId?: mongoose.Types.ObjectId; // <-- AHORA ES OPCIONAL
+  reporterId: mongoose.Types.ObjectId; 
   
   targetType: 'post' | 'comment' | 'message' | 'user' | 'wiki';
-  targetId: mongoose.Types.ObjectId; // El ID de lo que se reporta
+  targetId: mongoose.Types.ObjectId; 
   
-  reason: string; // Ej: "Spam", "Contenido inapropiado", "Acoso"
-  description?: string; // Detalles extra que el usuario quiera agregar
+  reason: string; 
+  description?: string; 
   
   status: 'pending' | 'resolved' | 'dismissed';
-  resolvedBy?: mongoose.Types.ObjectId; // Qué moderador atendió el caso
+  resolvedBy?: mongoose.Types.ObjectId; 
   
   createdAt: Date;
   updatedAt: Date;
@@ -19,7 +20,13 @@ export interface IReport extends Document {
 
 const ReportSchema: Schema = new Schema(
   {
-    communityId: { type: Schema.Types.ObjectId, ref: 'Community', required: true },
+    scope: { 
+      type: String, 
+      enum: ['global', 'community'], 
+      default: 'community' 
+    },
+    // Le quitamos el "required: true"
+    communityId: { type: Schema.Types.ObjectId, ref: 'Community' }, 
     reporterId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     targetType: { 
       type: String, 
@@ -39,7 +46,7 @@ const ReportSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-// Índices para que el panel de moderación cargue rápido
-ReportSchema.index({ communityId: 1, status: 1, createdAt: 1 });
+// Índice actualizado para búsquedas súper rápidas dependiendo del alcance
+ReportSchema.index({ scope: 1, communityId: 1, status: 1, createdAt: 1 });
 
 export const ReportModel = mongoose.model<IReport>('Report', ReportSchema);

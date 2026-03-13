@@ -308,7 +308,19 @@ export const banGlobalUserService = async (adminId: string, targetUserId: string
   targetUser.banReason = reason;
   await targetUser.save();
 
-  // Opcional en el futuro: Aquí podrías disparar un email al usuario informando de su baneo.
+  // ==========================================
+  // OCULTAMIENTO EN CASCADA (GHOSTING)
+  // ==========================================
+  try {
+    const posts = await PostModel.updateMany({ authorId: targetUserId }, { $set: { isHidden: true } });
+    const comments = await CommentModel.updateMany({ authorId: targetUserId }, { $set: { isHidden: true } });
+    const wikis = await WikiModel.updateMany({ authorId: targetUserId }, { $set: { isHidden: true } });
+    const memberships = await CommunityMemberModel.updateMany({ userId: targetUserId }, { $set: { status: 'banned' } });
+    
+    console.log(`[Sentinel] Cascada BAN ejecutada. Ocultos: ${posts.modifiedCount} posts, ${comments.modifiedCount} comentarios, ${wikis.modifiedCount} wikis. Membresías bloqueadas: ${memberships.modifiedCount}`);
+  } catch (cascadeError) {
+    console.error('[Sentinel] Error al ejecutar ocultamiento en cascada:', cascadeError);
+  }
 
   return { message: `La cuenta de ${targetUser.username} ha sido suspendida permanentemente de Legacy.` };
 };
@@ -326,5 +338,20 @@ export const unbanGlobalUserService = async (adminId: string, targetUserId: stri
   targetUser.banReason = undefined;
   await targetUser.save();
 
-  return { message: `La cuenta de ${targetUser.username} ha sido restaurada.` };
+  // ==========================================
+  // RESTAURACIÓN EN CASCADA
+  // ==========================================
+  try {
+    const posts = await PostModel.updateMany({ authorId: targetUserId }, { $set: { isHidden: false } });
+    const comments = await CommentModel.updateMany({ authorId: targetUserId }, { $set: { isHidden: false } });
+    const wikis = await WikiModel.updateMany({ authorId: targetUserId }, { $set: { isHidden: false } });
+    // Solo restauramos a 'active' a aquellos que estaban como 'banned', para no reactivar a alguien que se había salido ('left') por voluntad propia antes del ban.
+    const memberships = await CommunityMemberModel.updateMany({ userId: targetUserId, status: 'banned' }, { $set: { status: 'active' } });
+    
+    console.log(`[Sentinel] Cascada UNBAN ejecutada. Restaurados: ${posts.modifiedCount} posts, ${comments.modifiedCount} comentarios, ${wikis.modifiedCount} wikis. Membresías reactivadas: ${memberships.modifiedCount}`);
+  } catch (cascadeError) {
+    console.error('[Sentinel] Error al ejecutar restauración en cascada:', cascadeError);
+  }
+
+  return { message: `La cuenta de ${targetUser.username} ha sido restaurada con todo su contenido.` };
 };
