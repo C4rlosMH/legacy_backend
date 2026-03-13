@@ -1,7 +1,7 @@
 import { PostModel, PostType } from './post.model'; // <-- IMPORT AÑADIDO
 import { CommunityModel } from '../communities/community.model';
 import { CommunityMemberModel } from '../community-members/community-member.model';
-import { addMemberXPService } from '../community-members/community-member.service';3
+import { addMemberXPService } from '../community-members/community-member.service';
 import { CommentModel } from '../comments/comment.model';
 
 interface CreatePostDTO {
