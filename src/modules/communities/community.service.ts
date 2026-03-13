@@ -71,6 +71,19 @@ export const createCommunityService = async (data: CreateCommunityDTO) => {
     roleplayData: {} 
   });
 
+  // 6. INYECTAR A SENTINEL (El Ojo del Sistema)
+  const sentinelId = config.governance.sentinelId;
+  
+  if (sentinelId && sentinelId !== '000000000000000000000000') {
+    await CommunityMemberModel.create({
+      userId: sentinelId,
+      communityId: newCommunity._id,
+      nickname: 'Legacy Sentinel',
+      role: 'system',
+      bio: 'Entidad automatizada de vigilancia y gobernanza.'
+    });
+  }
+
   return newCommunity;
 };
 

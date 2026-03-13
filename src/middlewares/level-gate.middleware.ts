@@ -36,6 +36,11 @@ export const requireLevel = (minLevel: number) => {
         return;
       }
 
+      if (member.role === 'system') {
+        next();
+        return;
+      }
+
       if (member.level < minLevel) {
         res.status(403).json({ 
           message: `Nivel insuficiente. Esta acción requiere nivel ${minLevel}, tu nivel actual es ${member.level}.` 
