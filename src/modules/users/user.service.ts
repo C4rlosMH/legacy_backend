@@ -355,3 +355,9 @@ export const unbanGlobalUserService = async (adminId: string, targetUserId: stri
 
   return { message: `La cuenta de ${targetUser.username} ha sido restaurada con todo su contenido.` };
 };
+
+export const getMyProfileService = async (userId: string) => {
+  const user = await UserModel.findById(userId).select('-passwordHash');
+  if (!user) throw new Error('Usuario no encontrado');
+  return user;
+};

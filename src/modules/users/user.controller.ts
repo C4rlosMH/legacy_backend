@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { 
   createUserService, loginUserService, getUserProfileService, forgotPasswordService,
   updateGlobalProfileService, deleteUserAccountService, resetPasswordService, verifyEmailService,
-  blockUserService, unblockUserService, banGlobalUserService, unbanGlobalUserService,
+  blockUserService, unblockUserService, banGlobalUserService, unbanGlobalUserService, getMyProfileService
 } from './user.service';
 import { config } from '../../config'; 
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -221,5 +221,20 @@ export const unbanGlobalUser = async (req: AuthRequest, res: Response): Promise<
     res.status(200).json(result);
   } catch (error: any) {
     res.status(403).json({ message: error.message || 'Error al revertir el baneo global' });
+  }
+};
+
+export const getMyProfile = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ message: 'Usuario no autenticado' });
+      return;
+    }
+
+    const profile = await getMyProfileService(userId);
+    res.status(200).json({ profile });
+  } catch (error: any) {
+    res.status(404).json({ message: error.message });
   }
 };

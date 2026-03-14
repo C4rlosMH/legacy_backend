@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { registerUser, loginUser, getUserProfile, updateGlobalProfile, blockUser,
     deleteUserAccount, verifyEmail, resetPassword, forgotPassword, unblockUser,
-    banGlobalUser, unbanGlobalUser,
+    banGlobalUser, unbanGlobalUser, getMyProfile
  } from './user.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireGlobalRole } from '../../middlewares/global-role.middleware';
@@ -28,6 +28,8 @@ router.put('/profile', verifyToken, updateGlobalProfile);
 // Ruta para ELIMINAR tu cuenta global (Protegida)
 router.delete('/account', verifyToken, deleteUserAccount);
 
+
+router.get('/me', verifyToken, getMyProfile);
 // Ruta para ver el perfil global de alguien más (Pública)
 // GET /api/v1/users/:username
 router.get('/:username', getUserProfile);
