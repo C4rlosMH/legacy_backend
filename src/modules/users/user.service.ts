@@ -108,7 +108,7 @@ export const updateGlobalProfileService = async (userId: string, data: UpdateGlo
   const updatedUser = await UserModel.findByIdAndUpdate(
     userId,
     { $set: data }, 
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   ).select('-passwordHash'); 
 
   if (!updatedUser) {

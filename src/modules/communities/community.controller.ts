@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { createCommunityService, getCommunityDetailsService, searchCommunitiesService,
   updateCommunitySettingsService, deleteCommunityService, requestCommunityListingService,
-  approveCommunityListingService, rejectCommunityListingService,
+  approveCommunityListingService, rejectCommunityListingService, getExploreCommunitiesService
  } from './community.service';
 import { config } from '../../config';
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -73,13 +73,19 @@ export const searchCommunities = async (req: Request, res: Response): Promise<vo
 export const updateCommunitySettings = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const communityId = req.params.communityId as string;
-    const { name, description, avatar, banner } = req.body;
+    
+    // AÑADIDO: Extraemos los nuevos campos booleanos y de chat
+    const { name, description, avatar, banner, isBlogsEnabled, isWikisEnabled, chatCreationMode, blocks } = req.body;
 
     const updatedCommunity = await updateCommunitySettingsService(communityId, {
       name,
       description,
       avatar,
-      banner
+      banner,
+      isBlogsEnabled,
+      isWikisEnabled,
+      chatCreationMode,
+      blocks // <-- Añadimos esto
     });
 
     res.status(200).json({
@@ -146,5 +152,14 @@ export const rejectListing = async (req: AuthRequest, res: Response): Promise<vo
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+export const getExploreCommunities = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const communities = await getExploreCommunitiesService();
+    res.status(200).json({ communities });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || 'Error al cargar el feed global' });
   }
 };

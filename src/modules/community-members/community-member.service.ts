@@ -149,7 +149,7 @@ export const updateCommunityProfileService = async (userId: string, communityId:
   const updatedMember = await CommunityMemberModel.findOneAndUpdate(
     { userId, communityId },
     { $set: data },
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!updatedMember) {
@@ -370,3 +370,10 @@ export const addMemberXPService = async (userId: string, communityId: string, am
   await member.save();
 };
 
+export const getCommunityMembersService = async (communityId: string) => {
+  const members = await CommunityMemberModel.find({ communityId, status: 'active' })
+    .populate('userId', 'name username avatar') // Traemos la info pública del usuario
+    .sort({ role: -1, createdAt: 1 }); // Ordenamos para que los líderes salgan arriba
+
+  return members;
+};

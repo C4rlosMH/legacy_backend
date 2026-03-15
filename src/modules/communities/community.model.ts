@@ -15,6 +15,8 @@ export interface ICommunity extends Document {
   isBlogsEnabled: boolean;
   isWikisEnabled: boolean;
 
+  blocks: any[];
+
   // NUEVO: Protocolo Anti-Zombie
   systemStatus: 'active' | 'warned' | 'zombie';
   systemWarningDate?: Date | undefined;
@@ -82,6 +84,10 @@ const CommunitySchema: Schema = new Schema(
       type: String,
       enum: ['all', 'staff'],
       default: 'all'
+    },
+    blocks: {
+      type: Schema.Types.Mixed,
+      default: []
     },
   },
   { timestamps: true }

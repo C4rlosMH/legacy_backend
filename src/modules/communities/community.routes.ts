@@ -1,19 +1,25 @@
 import { Router } from 'express';
-import { createCommunity, getCommunityDetails, searchCommunities, updateCommunitySettings,
-  deleteCommunity, requestListing, approveListing, rejectListing
- } from './community.controller';
+import { 
+  createCommunity, getCommunityDetails, searchCommunities, updateCommunitySettings,
+  deleteCommunity, requestListing, approveListing, rejectListing,
+  getExploreCommunities // <-- Asegúrate de que esto esté importado
+} from './community.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
 
 const router = Router();
 
-// Ruta: POST /api/v1/communities
+// 1. Ruta: POST /api/v1/communities
 router.post('/', verifyToken, createCommunity);
 
-// Ruta: GET /api/v1/communities/search?q=texto (Pública - Buscador Global)
+// 2. Ruta: GET /api/v1/communities/search?q=texto (Pública - Buscador Global)
 router.get('/search', searchCommunities);
 
-// Solo Owner y Admin pueden pasar
+// 3. Ruta: GET /api/v1/communities/explore (Feed Global)
+// ¡DEBE IR ANTES DE /:id O /:communityId PARA QUE NO CHOQUEN!
+router.get('/explore', getExploreCommunities);
+
+// 4. Solo Owner y Admin pueden pasar a Settings
 router.put(
   '/:communityId/settings', 
   verifyToken, 
@@ -21,19 +27,15 @@ router.put(
   updateCommunitySettings
 );
 
-// Aquí a futuro agregaremos rutas como:
+// 5. Detalles de la comunidad (El comodín)
 router.get('/:id', getCommunityDetails);
-// router.put('/:id', updateCommunity);
 
-// Ruta: DELETE /api/v1/communities/:communityId
-// Peligro: Borrado total. Solo el Owner puede pasar.
+// 6. Ruta: DELETE /api/v1/communities/:communityId
 router.delete('/:communityId', verifyToken, requireCommunityRole(['owner']), deleteCommunity);
 
+// 7. Rutas de listado (Privado/Público)
 router.post('/:communityId/request-listing', verifyToken, requestListing);
-
 router.post('/:communityId/approve-listing', verifyToken, approveListing);
-
-// POST: Rechazar un universo (Solo Team Legacy)
 router.post('/:communityId/reject-listing', verifyToken, rejectListing);
 
 export default router;

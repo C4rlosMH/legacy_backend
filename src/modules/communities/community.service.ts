@@ -115,13 +115,17 @@ interface UpdateCommunityDTO {
   description?: string;
   avatar?: string;
   banner?: string;
+  isBlogsEnabled?: boolean;          // <-- NUEVO
+  isWikisEnabled?: boolean;          // <-- NUEVO
+  chatCreationMode?: 'all' | 'staff'; // <-- NUEVO
+  blocks?: any[];
 }
 
 export const updateCommunitySettingsService = async (communityId: string, data: UpdateCommunityDTO) => {
   const updatedCommunity = await CommunityModel.findByIdAndUpdate(
     communityId,
     { $set: data }, 
-    { new: true, runValidators: true }
+    { returnDocument: 'after', runValidators: true }
   );
 
   if (!updatedCommunity) {
@@ -291,3 +295,11 @@ export const rejectCommunityListingService = async (communityId: string, reason?
 
   return { message: 'Solicitud de listado rechazada.', feedback };
 };
+
+export const getExploreCommunitiesService = async () => {
+  // Buscamos comunidades públicas y las ordenamos por las más recientes
+  const communities = await CommunityModel.find({ visibility: 'public' })
+    .sort({ createdAt: -1 })
+    .limit(20); 
+  return communities;
+};  

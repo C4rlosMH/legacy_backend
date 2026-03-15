@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { getUserCommunitiesService, joinCommunityService, updateCommunityProfileService, 
   updateMemberRoleService, toggleHideProfileService, kickMemberService, leaveCommunityService,
-  getPendingRequestsService, processJoinRequestService, unbanMemberService, issueStrikeService,
+  getPendingRequestsService, processJoinRequestService, unbanMemberService, issueStrikeService, getCommunityMembersService,
 } from './community-member.service';
 import { AuthRequest } from '../../middlewares/auth.middleware';
 import { CommunityRole } from '../../middlewares/community-role.middleware';
@@ -228,5 +228,22 @@ export const issueStrike = async (req: AuthRequest, res: Response): Promise<void
     res.status(200).json(result);
   } catch (error: any) {
     res.status(400).json({ message: error.message || 'Error al aplicar la falta' });
+  }
+};
+
+export const getCommunityMembers = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const communityId = req.params.communityId as string;
+    
+    if (!communityId) {
+      res.status(400).json({ message: 'ID de comunidad requerido' });
+      return;
+    }
+
+    const members = await getCommunityMembersService(communityId);
+    
+    res.status(200).json({ members });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message || 'Error al obtener la lista de miembros' });
   }
 };

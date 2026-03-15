@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { 
   joinCommunity, leaveCommunity, getUserCommunities, updateCommunityProfile, 
   updateMemberRole, toggleHideProfile, kickMember, getPendingRequests, processJoinRequest, unbanMember,
-  issueStrike,
+  issueStrike, getCommunityMembers,
 } from './community-member.controller';
 import { verifyToken } from '../../middlewares/auth.middleware';
 import { requireCommunityRole } from '../../middlewares/community-role.middleware';
@@ -66,5 +66,8 @@ router.post('/:communityId/strike/:targetUserId', verifyToken,
   requireCommunityRole(['owner', 'admin', 'moderator']), 
   issueStrike
 );
+
+// Ruta: GET /api/v1/community-members/community/:communityId
+router.get('/community/:communityId', verifyToken, getCommunityMembers);
 
 export default router;
