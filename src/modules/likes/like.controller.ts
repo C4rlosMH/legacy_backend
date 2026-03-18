@@ -5,7 +5,7 @@ import { toggleLikeService } from './like.service';
 export const toggleLike = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.id;
-    const { targetType, targetId } = req.body;
+    const { targetType, targetId, reactionType = 'like' } = req.body;
 
     if (!userId) {
       res.status(401).json({ message: 'Usuario no autenticado' });
@@ -22,7 +22,7 @@ export const toggleLike = async (req: AuthRequest, res: Response): Promise<void>
       return;
     }
 
-    const result = await toggleLikeService(userId, targetType as any, targetId);
+    const result = await toggleLikeService(userId, targetType as any, targetId, reactionType as any);
     
     res.status(200).json(result);
   } catch (error: any) {

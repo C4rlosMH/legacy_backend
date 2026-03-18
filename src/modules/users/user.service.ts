@@ -361,3 +361,11 @@ export const getMyProfileService = async (userId: string) => {
   if (!user) throw new Error('Usuario no encontrado');
   return user;
 };
+
+export const searchUsersService = async (query: string) => {
+  if (!query) return [];
+  const regex = new RegExp(query, 'i');
+  return await UserModel.find({ 
+    $or: [{ username: regex }, { name: regex }] 
+  }).select('username name avatar').limit(10);
+};

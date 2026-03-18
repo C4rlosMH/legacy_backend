@@ -68,4 +68,9 @@ export const config = {
     minWikisToList: Number(process.env.COMMUNITY_MIN_WIKIS_TO_LIST),
     maxDisplayTitles: 5,
   },
+  upload: {
+    // URL base publica del servidor para armar las URLs de las imagenes.
+    // Debe coincidir con la IP y puerto del backend accesibles desde el movil.
+    serverUrl: process.env.SERVER_URL || 'http://192.168.2.221:2700',
+  },
 };

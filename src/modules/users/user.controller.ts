@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { 
   createUserService, loginUserService, getUserProfileService, forgotPasswordService,
   updateGlobalProfileService, deleteUserAccountService, resetPasswordService, verifyEmailService,
-  blockUserService, unblockUserService, banGlobalUserService, unbanGlobalUserService, getMyProfileService
+  blockUserService, unblockUserService, banGlobalUserService, unbanGlobalUserService, getMyProfileService, searchUsersService
 } from './user.service';
 import { config } from '../../config'; 
 import { AuthRequest } from '../../middlewares/auth.middleware';
@@ -236,5 +236,15 @@ export const getMyProfile = async (req: AuthRequest, res: Response): Promise<voi
     res.status(200).json({ profile });
   } catch (error: any) {
     res.status(404).json({ message: error.message });
+  }
+};
+
+export const searchUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const query = req.query.q as string;
+    const users = await searchUsersService(query);
+    res.status(200).json({ users });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 };

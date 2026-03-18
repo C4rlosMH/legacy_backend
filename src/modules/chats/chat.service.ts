@@ -65,6 +65,8 @@ export const sendMessageService = async (chatId: string, senderId: string, conte
     content
   });
 
+  const populatedMessage = await MessageModel.findById(newMessage._id).populate('senderId', 'name username avatar');
+
   // Actualizamos la sala de chat para que este nuevo mensaje sea el "lastMessage"
   // Esto hará que la bandeja de entrada se actualice automáticamente
   await ChatModel.findByIdAndUpdate(chatId, {lastMessage: newMessage._id});
@@ -77,7 +79,7 @@ export const sendMessageService = async (chatId: string, senderId: string, conte
     );
   }
 
-  return newMessage;
+  return populatedMessage;
 };
 
 // 3. Obtener la bandeja de entrada de un usuario (Sus chats)
@@ -109,6 +111,7 @@ export const getChatMessagesService = async (chatId: string, userId: string) => 
 
   // Buscamos los mensajes y los ordenamos cronológicamente (del más viejo al más nuevo)
   const messages = await MessageModel.find({ chatId })
+    .populate('senderId', 'name username avatar')
     .sort({ createdAt: 1 }); 
 
   return messages;

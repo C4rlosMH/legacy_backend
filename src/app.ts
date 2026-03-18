@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import { config } from './config'; // Importamos la configuración
+import path from 'path';
+import { config } from './config';
 
 // Importamos las rutas de los módulos
 import userRoutes from './modules/users/user.routes';
@@ -12,15 +13,20 @@ import chatRoutes from './modules/chats/chat.routes';
 import wikiRoutes from './modules/wikis/wiki.routes';
 import notificationRoutes from './modules/notifications/notification.routes';
 import likeRoutes from './modules/likes/like.routes';
-import economyRoutes from './modules/economy/economy.routes'
+import economyRoutes from './modules/economy/economy.routes';
 import insurrectionRoutes from './modules/governance/insurrection.routes';
 import communityTitleRoutes from './modules/community-titles/community-title.routes';
-import moderationRoutes from './modules/moderation/moderation.routes'
+import moderationRoutes from './modules/moderation/moderation.routes';
+import uploadRoutes from './modules/upload/upload.routes';
 
 const app: Application = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Servir archivos estaticos desde public/ (avatares, banners, uploads)
+// Accesible en http://IP:PORT/uploads/filename.jpg
+app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
 // Usamos el prefijo desde la configuración
 const apiPrefix = config.api.prefix;
@@ -38,6 +44,7 @@ app.use(`${apiPrefix}/likes`, likeRoutes);
 app.use(`${apiPrefix}/economy`, economyRoutes);
 app.use(`${apiPrefix}/governance/insurrections`, insurrectionRoutes);
 app.use(`${apiPrefix}/community-titles`, communityTitleRoutes);
-app.use('${apiPrefix}/moderation', moderationRoutes);
+app.use(`${apiPrefix}/moderation`, moderationRoutes);
+app.use(`${apiPrefix}/upload`, uploadRoutes);
 
-export default app;
+export default app;
